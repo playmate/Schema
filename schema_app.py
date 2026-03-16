@@ -6,25 +6,28 @@ from io import BytesIO
 st.set_page_config(page_title="Schemagenerator", layout="wide")
 st.title("📅 Generera schema")
 
-# --- Button Styling ---
-st.markdown(
-    """
-    <style>
-    div.stButton > button:first-child {
-        background-color: #4CAF50;
-        color: white;
-        height: 3em;
-        width: 100%;
-        font-size: 16px;
-        font-weight: bold;
-        border-radius: 8px;
-        margin-bottom: 10px;
-    }
-    </style>
-    """, unsafe_allow_html=True
-)
+# --- BUTTON STYLING ---
+st.markdown("""
+<style>
+div.stButton > button:first-child {
+    background-color: #4CAF50;
+    color: white;
+    height: 3em;
+    width: 100%;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+button.remove-btn {
+    background-color:#f44336 !important;
+    color:white !important;
+    border-radius:50%;
+}
+</style>
+""", unsafe_allow_html=True)
 
-# --- SCHEDULE SETTINGS ---
+# --- SCHEM SETTINGS ---
 with st.expander("⚙️ Schemainställningar", expanded=True):
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -47,9 +50,23 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
         "Max antal pass per person per dag:",
         min_value=1,
         value=2,
-        step=1,
-        help="Hur många pass varje person kan arbeta per dag"
+        step=1
     )
+
+    # --- Manual pass times ---
+    manual_times = st.checkbox("Edit pass times manually")
+    if manual_times:
+        if "pass_times_manual" not in st.session_state:
+            st.session_state.pass_times_manual = [start_day + pd.Timedelta(minutes=i*pass_langd) for i in range(pass_per_day)]
+        pass_time_inputs = []
+        for i in range(pass_per_day):
+            pt_start = st.time_input(f"Pass {i+1} start", value=st.session_state.pass_times_manual[i].time())
+            pt_end = st.time_input(f"Pass {i+1} end", value=(st.session_state.pass_times_manual[i]+pd.Timedelta(minutes=pass_langd)).time())
+            st.session_state.pass_times_manual[i] = pd.to_datetime(pt_start.strftime("%H:%M"))
+            pass_time_inputs.append(f"{pt_start.strftime('%H:%M')}–{pt_end.strftime('%H:%M')}")
+        st.session_state.pass_times_display = pass_time_inputs
+    else:
+        st.session_state.pass_times_display = [f"{(start_day + pd.Timedelta(minutes=i*pass_langd)).time().strftime('%H:%M')}–{(start_day + pd.Timedelta(minutes=(i+1)*pass_langd)).time().strftime('%H:%M')}" for i in range(pass_per_day)]
 
 # --- PERSONAL SECTION ---
 with st.expander("👤 Personal", expanded=True):
@@ -61,7 +78,7 @@ with st.expander("👤 Personal", expanded=True):
         st.markdown(f"**Person {i+1}**")
         cols = st.columns([3, 1, 2, 2])
         name_input = cols[0].text_input(f"Namn", value=n, key=f"name_{i}")
-        remove = cols[1].button("X", key=f"remove_{i}")
+        remove = cols[1].button("❌", key=f"remove_{i}", help="Ta bort person")
         start_time = cols[2].time_input("Börjar jobba", value=pd.to_datetime("08:00").time(), key=f"start_{i}")
         end_time = cols[3].time_input("Slutar jobba", value=pd.to_datetime("16:00").time(), key=f"slut_{i}")
         if not remove:
@@ -88,25 +105,20 @@ with st.expander("👤 Personal", expanded=True):
     if st.button("Lägg till person"):
         st.session_state.people.append(f"Namn {len(st.session_state.people)+1}")
 
-# --- General parameters ---
+# --- General params ---
 veckodagar = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag"]
 antal_veckor = 4
 totalt_pass_per_person = len(veckodagar) * pass_per_day * antal_veckor
 
 # --- Colors ---
-default_colors = [
-    "#FF9999","#99CCFF","#FFCC99","#99FF99",
-    "#FFCCFF","#CCCCFF","#FFFF99","#FF9966","#66CC99"
-]
+default_colors = ["#FF9999","#99CCFF","#FFCC99","#99FF99","#FFCCFF","#CCCCFF","#FFFF99","#FF9966","#66CC99"]
 farger = {n: default_colors[i % len(default_colors)] for i, n in enumerate(namn)}
 farger["Ingen tillgänglig"] = "#E0E0E0"
 
 # --- FAIR SCHEDULE GENERATOR ---
 def skapa_schema():
     schema = {f"Vecka {v+1}": {dag:{} for dag in veckodagar} for v in range(antal_veckor)}
-    pass_raknare = {n:0 for n in namn}  # total assigned passes
-    pass_start_times = [start_day + pd.Timedelta(minutes=i*pass_langd) for i in range(pass_per_day)]
-
+    pass_raknare = {n:0 for n in namn}  
     for vecka in range(antal_veckor):
         used_passes_per_person = {n:set() for n in namn}
         for dag in veckodagar:
@@ -115,14 +127,13 @@ def skapa_schema():
             for p_idx in range(pass_per_day):
                 p = f"Pass {p_idx+1}"
                 last_person = list(tidigare_pass.values())[-1] if tidigare_pass else None
-                pass_time = pass_start_times[p_idx].time()
-                # Available people based on personal start/end
+                pass_time = st.session_state.pass_times_display[p_idx].split("–")[0]
                 tillgangliga = [
                     n for n in namn
                     if daily_count[n] < max_pass_per_person_per_day
                     and n != last_person
                     and p not in used_passes_per_person[n]
-                    and start_tid[n] <= pass_time < slut_tid[n]
+                    and start_tid[n] <= pd.to_datetime(pass_time).time() < slut_tid[n]
                 ]
                 if tillgangliga:
                     min_passes = min(pass_raknare[n] for n in tillgangliga)
@@ -137,7 +148,7 @@ def skapa_schema():
     return schema
 
 # --- GENERATE SCHEDULE ---
-with st.expander("📊 Generera schema", expanded=True):
+with st.expander("📊 Genererat schema", expanded=True):
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("Generera schema"):
         schema = skapa_schema()
@@ -146,75 +157,22 @@ with st.expander("📊 Generera schema", expanded=True):
         for vecka, dagar in schema.items():
             st.subheader(vecka)
             for dag, passes in dagar.items():
-                html = f"<h5>{dag}</h5>"
-                html += "<table style='border-collapse:collapse;width:100%;table-layout:fixed;'><tr>"
-                for p in sorted(passes.keys(), key=lambda x: int(x.split()[1])):
+                html = f"<h5>{dag}</h5><table style='border-collapse:collapse;width:100%;table-layout:fixed;'>"
+                # Pass times row
+                html += "<tr>"
+                for pt in st.session_state.pass_times_display:
+                    html += f"<td style='border:1px solid white;width:{cell_width}%;height:20px;padding:2px;text-align:center;font-size:12px;background-color:#f0f0f0;'>{pt}</td>"
+                html += "</tr>"
+                # Person row
+                html += "<tr>"
+                for p_idx in range(pass_per_day):
+                    p = f"Pass {p_idx+1}"
                     person = passes[p]
                     color = farger.get(person, "#FFFFFF")
                     html += (
-                        f"<td style='border:1px solid white;width:{cell_width}%;height:60px;"
-                        f"padding:4px;background-color:{color};color:black;"
-                        f"text-align:center;vertical-align:middle;word-wrap:break-word;"
-                        f"overflow:hidden;font-size:14px;'>{person}</td>"
+                        f"<td style='border:1px solid white;width:{cell_width}%;height:60px;padding:4px;"
+                        f"background-color:{color};color:black;text-align:center;vertical-align:middle;"
+                        f"word-wrap:break-word;overflow:hidden;font-size:14px;'>{person}</td>"
                     )
                 html += "</tr></table>"
                 st.markdown(html, unsafe_allow_html=True)
-
-            # Weekly sorted counts
-            person_count = {n:0 for n in namn}
-            for dag, passes in dagar.items():
-                for person in passes.values():
-                    if person in person_count:
-                        person_count[person] += 1
-            sorted_counts = sorted(person_count.items(), key=lambda x:x[1], reverse=True)
-            count_html = "<h6>Antal pass per person denna vecka:</h6><table><tr>"
-            for name,_ in sorted_counts:
-                count_html += f"<th style='border:1px solid black;padding:5px;'>{name}</th>"
-            count_html += "</tr><tr>"
-            for _,count in sorted_counts:
-                count_html += f"<td style='border:1px solid black;padding:5px;text-align:center;'>{count}</td>"
-            count_html += "</tr></table>"
-            st.markdown(count_html, unsafe_allow_html=True)
-
-        # --- Color Legend ---
-        legend_html = "<p><b>Färger:</b> "
-        for n in namn:
-            legend_html += f"<span style='background-color:{farger[n]};padding:3px 6px;margin-right:4px;border-radius:3px;'>{n}</span>"
-        st.markdown(legend_html, unsafe_allow_html=True)
-
-        # --- Excel export ---
-        output = BytesIO()
-        with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-            workbook = writer.book
-            worksheet = workbook.add_worksheet("Schema")
-            writer.sheets["Schema"] = worksheet
-            format_dict = {}
-            for person, color in farger.items():
-                format_dict[person] = workbook.add_format({
-                    "bg_color": color, "align":"center","valign":"vcenter",
-                    "border":1,"text_wrap":True
-                })
-            header_format = workbook.add_format({"bold":True,"border":1,"align":"center"})
-            worksheet.write(0,0,"Dag",header_format)
-            for i in range(pass_per_day):
-                worksheet.write(0,i+1,f"Pass {i+1}",header_format)
-                worksheet.set_column(i+1,i+1,18)
-            row = 1
-            for vecka, dagar in schema.items():
-                worksheet.write(row,0,vecka)
-                row += 1
-                for dag, passes in dagar.items():
-                    worksheet.write(row,0,dag)
-                    for i in range(pass_per_day):
-                        person = passes[f"Pass {i+1}"]
-                        cell_format = format_dict.get(person)
-                        worksheet.write(row,i+1,person,cell_format)
-                    row += 1
-                row += 1
-
-        st.download_button(
-            label="⬇️ Ladda ner schemat som Excel",
-            data=output.getvalue(),
-            file_name="schema.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
