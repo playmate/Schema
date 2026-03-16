@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import random
@@ -9,28 +8,44 @@ st.title("Generera schema")
 # --- Settings ---
 st.subheader("Schemainställningar:")
 
-pass_langd = st.number_input(
-    "Passlängd (minuter)",
-    min_value=5,
-    value=60,
-    step=5
+# --- Schematider ---
+st.markdown("**Schematider**")
+
+start_day_time = st.time_input(
+    "Starttid",
+    value=pd.to_datetime("08:00").time(),
+    key="schematid_start"
+)
+end_day_time = st.time_input(
+    "Sluttid",
+    value=pd.to_datetime("16:00").time(),
+    key="schematid_slut"
 )
 
+start_day = pd.to_datetime(start_day_time.strftime("%H:%M"))
+end_day = pd.to_datetime(end_day_time.strftime("%H:%M"))
+
+total_minutes = int((end_day - start_day).total_seconds() / 60)
+
+# --- Pass per dag ---
+pass_per_day = st.number_input(
+    "Pass per dag",
+    min_value=1,
+    value=8,
+    step=1
+)
+
+# --- Passlängd (calculated automatically) ---
+pass_langd = total_minutes // pass_per_day
+st.write(f"Passlängd per pass: **{pass_langd} minuter**")
+
+# --- Max pass per person per day ---
 max_pass_per_person_per_day = st.number_input(
     "Max antal pass per person per dag:",
     min_value=1,
     value=2,
     step=1
 )
-
-# Fixed workday
-start_day = pd.to_datetime("08:00")
-end_day = pd.to_datetime("16:00")
-
-total_minutes = int((end_day - start_day).total_seconds() / 60)
-antal_pass = total_minutes // pass_langd
-
-st.write(f"Antal pass per dag: **{antal_pass}**")
 
 # --- Editable list of people ---
 if "people" not in st.session_state:
@@ -102,7 +117,7 @@ for n in namn:
 veckodagar = ["Måndag","Tisdag","Onsdag","Torsdag","Fredag"]
 antal_veckor = 4
 
-totalt_pass_per_person = len(veckodagar) * antal_pass * antal_veckor
+totalt_pass_per_person = len(veckodagar) * pass_per_day * antal_veckor
 
 # --- Colors ---
 default_colors = [
@@ -130,7 +145,7 @@ def skapa_schema():
 
     pass_start_times = [
         start_day + pd.Timedelta(minutes=i*pass_langd)
-        for i in range(antal_pass)
+        for i in range(pass_per_day)
     ]
 
     for vecka in range(antal_veckor):
@@ -142,7 +157,7 @@ def skapa_schema():
             daily_count = {n:0 for n in namn}
             tidigare_pass = schema[f"Vecka {vecka+1}"][dag]
 
-            for p_idx in range(antal_pass):
+            for p_idx in range(pass_per_day):
 
                 p = f"Pass {p_idx+1}"
                 last_person = list(tidigare_pass.values())[-1] if tidigare_pass else None
@@ -180,7 +195,7 @@ def skapa_schema():
 if st.button("Generera schema"):
 
     schema = skapa_schema()
-    cell_width = 100 / antal_pass
+    cell_width = 100 / pass_per_day
 
     for vecka, dagar in schema.items():
 
@@ -274,7 +289,7 @@ if st.button("Generera schema"):
 
         worksheet.write(0,0,"Dag",header_format)
 
-        for i in range(antal_pass):
+        for i in range(pass_per_day):
             worksheet.write(0,i+1,f"Pass {i+1}",header_format)
             worksheet.set_column(i+1,i+1,18)
 
@@ -289,7 +304,7 @@ if st.button("Generera schema"):
 
                 worksheet.write(row,0,dag)
 
-                for i in range(antal_pass):
+                for i in range(pass_per_day):
 
                     person = passes[f"Pass {i+1}"]
                     cell_format = format_dict.get(person)
