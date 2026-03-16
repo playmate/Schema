@@ -23,7 +23,7 @@ div.stButton > button:first-child {
 </style>
 """, unsafe_allow_html=True)
 
-# --- SCHEDULE SETTINGS (aligned vertically) ---
+# --- SCHEDULE SETTINGS ---
 with st.expander("⚙️ Schemainställningar", expanded=True):
     # Row 1: Starttid, Sluttid
     col1, col2 = st.columns([1,1])
@@ -81,6 +81,7 @@ with st.expander("👤 Personal", expanded=True):
 
     new_people_list = []
     for i, n in enumerate(st.session_state.people):
+        # Uniform row layout
         cols = st.columns([3,2,2,0.5])
         name_input = cols[0].text_input("Namn", value=n, key=f"name_{i}")
         start_time = cols[1].time_input("Börjar jobba", value=pd.to_datetime("08:00").time(), key=f"start_{i}")
