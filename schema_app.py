@@ -157,11 +157,11 @@ with st.expander("ℹ️ Information", expanded=False):
     st.markdown("""
 
 Genereras för att vara så rättvist som möjligt och efter kriterierna att:  
+   - Passet hamnar inom personens arbetstider 
    - Personen inte redan har max antal pass per dag  
    - Personen inte fick samma föregående dag  
-   - Passet hamnar inom personens arbetstider  
-     
-   Om flera kandidater är tillgängliga så väljs en med minst antal pass  
+   - Försöker att frånkomma för många första/sista-pass på samma person så mycket som möjligt
+   - Om flera personer är tillgängliga så väljs en med minst antal pass  
 
 """)
 
