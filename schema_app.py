@@ -159,10 +159,9 @@ with st.expander("ℹ️ Information", expanded=False):
 Genereras för att vara så rättvist som möjligt och efter kriterierna att:  
    - Personen inte redan har max antal pass per dag  
    - Personen inte fick samma föregående dag  
-   - Passet hamnar inom personens arbetstider 
-   - Försöker att sprida ut första & sista-pass så mycket som möjligt
-   
-   Om flera personer är tillgängliga så väljs en med minst antal pass  
+   - Passet hamnar inom personens arbetstider  
+     
+   Om flera kandidater är tillgängliga så väljs en med minst antal pass  
 
 """)
 
@@ -226,22 +225,21 @@ if st.button("Generera schema", key="generate_schedule"):
                     end_min = pd.to_datetime(st.session_state.pass_times_display[i].split("–")[1])
                     pass_minutes[person] += int((end_min - start_min).total_seconds() / 60)
 
-    # --- DISPLAY PASS SUMMARY AS TABLE ---
+    # --- DISPLAY PASS SUMMARY AS TABLE (BLACK TEXT, WHITE BORDER) ---
     st.subheader("📊 Sammanställning: Pass per person")
-
     summary_html = "<table style='border-collapse:collapse;width:100%;table-layout:fixed;'>"
-    summary_html += "<tr><th style='border:1px solid black;padding:4px;text-align:left;'>Person</th>"
-    summary_html += "<th style='border:1px solid black;padding:4px;text-align:center;'>Antal pass</th>"
-    summary_html += "<th style='border:1px solid black;padding:4px;text-align:center;'>Total tid (HH:MM)</th></tr>"
+    summary_html += "<tr><th style='border:1px solid white;padding:4px;text-align:left;'>Person</th>"
+    summary_html += "<th style='border:1px solid white;padding:4px;text-align:center;'>Antal pass</th>"
+    summary_html += "<th style='border:1px solid white;padding:4px;text-align:center;'>Total tid (HH:MM)</th></tr>"
 
     for n in namn:
         hours, minutes = divmod(pass_minutes[n], 60)
         color = farger.get(n, "#FFFFFF")
         summary_html += (
             f"<tr>"
-            f"<td style='border:1px solid black;padding:4px;background-color:{color};'>{n}</td>"
-            f"<td style='border:1px solid black;padding:4px;text-align:center;background-color:{color};'>{pass_count[n]}</td>"
-            f"<td style='border:1px solid black;padding:4px;text-align:center;background-color:{color};'>{hours:02d}:{minutes:02d}</td>"
+            f"<td style='border:1px solid white;padding:4px;background-color:{color};color:black;'>{n}</td>"
+            f"<td style='border:1px solid white;padding:4px;text-align:center;background-color:{color};color:black;'>{pass_count[n]}</td>"
+            f"<td style='border:1px solid white;padding:4px;text-align:center;background-color:{color};color:black;'>{hours:02d}:{minutes:02d}</td>"
             f"</tr>"
         )
     summary_html += "</table>"
