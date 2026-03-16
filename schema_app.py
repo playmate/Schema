@@ -17,7 +17,6 @@ div.stButton > button:first-child {
     height: 3.5em !important;
     width: 100% !important;
     border-radius: 10px !important;
-    box-shadow: 3px 3px 5px #888888 !important;
     margin-top: 10px !important;
     margin-bottom: 20px !important;
 }
@@ -77,11 +76,11 @@ with st.expander("👤 Personal", expanded=True):
 
     new_people_list = []
     for i, n in enumerate(st.session_state.people):
-        cols = st.columns([3,1,2,2])
-        name_input = cols[0].text_input(f"Namn", value=n, key=f"name_{i}")
-        remove = cols[1].button("❌", key=f"remove_{i}", help="Ta bort person")
-        start_time = cols[2].time_input("Börjar jobba", value=pd.to_datetime("08:00").time(), key=f"start_{i}")
-        end_time = cols[3].time_input("Slutar jobba", value=pd.to_datetime("16:00").time(), key=f"slut_{i}")
+        cols = st.columns([3,2,2,1])
+        name_input = cols[0].text_input("Namn", value=n, key=f"name_{i}")
+        start_time = cols[1].time_input("Börjar jobba", value=pd.to_datetime("08:00").time(), key=f"start_{i}")
+        end_time = cols[2].time_input("Slutar jobba", value=pd.to_datetime("16:00").time(), key=f"slut_{i}")
+        remove = cols[3].button("❌", key=f"remove_{i}", help="Ta bort person")
         if not remove:
             new_people_list.append(name_input)
 
@@ -101,7 +100,6 @@ with st.expander("👤 Personal", expanded=True):
     start_tid = st.session_state.start_tid
     slut_tid = st.session_state.slut_tid
 
-    # Add person
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("Lägg till person"):
         st.session_state.people.append(f"Namn {len(st.session_state.people)+1}")
@@ -147,15 +145,41 @@ def skapa_schema():
                 schema[f"Vecka {vecka+1}"][dag][p] = vald
     return schema
 
-# --- VARIABLES EXPLAINED ---
+# --- DETAILED VARIABLES EXPLAINED ---
 with st.expander("Använda variabler", expanded=False):
     st.markdown("""
-    **Antal pass per dag:** Hur många pass som ska schemaläggas under en dag.  
-    **Passlängd:** Längden på varje pass, beräknas automatiskt utifrån start/slut-tid och antal pass.  
-    **Max antal pass per person per dag:** Begränsar hur många pass en person kan få på en dag.  
-    **Personliga arbetstider:** En persons start- och sluttid avgör vilka pass de kan tilldelas.  
-    **Rättvisa:** Schemat försöker jämnt fördela pass mellan alla personer.  
-    **Manuella pass-tider:** Om du vill kan du skriva in start och slut för varje pass manuellt.  
+    Här är en detaljerad förklaring av hur schemat skapas och vad de olika inställningarna betyder:
+
+    **Antal pass per dag:** Bestämmer hur många pass som schemaläggs under en arbetsdag.  
+    Exempel: 08:00–16:00 med 8 pass = 60 minuter per pass.
+
+    **Passlängd:** Beräknas automatiskt utifrån start- och sluttid och antal pass.  
+    Du kan också manuellt ange start- och sluttider för varje pass.
+
+    **Max antal pass per person per dag:** Begränsar hur många pass en person kan få på en dag.
+
+    **Personliga arbetstider:** Varje person har start- och sluttid.  
+    Exempel: P2 slutar kl 12:00 → inga pass efter 12:00 tilldelas P2.
+
+    **Rättvisa:** Schemat försöker jämnt fördela passen.  
+    Vid flera tillgängliga kandidater väljs den med minst antal pass hittills.
+
+    **Manuella pass-tider:** Om du aktiverar detta kan du skriva in start/slut-tider för varje pass.
+
+    **Logik steg för steg:**  
+    1. Vecka → dag → pass  
+    2. Lista alla tillgängliga personer som uppfyller kriterier:  
+       - Ej max pass per dag  
+       - Inte sist tilldelad samma pass  
+       - Pass inom arbetstid  
+       - Minst antal pass hittills (rättvisa)  
+    3. Om ingen uppfyller kriterier → "Ingen tillgänglig"  
+    4. Färgläggning sker automatiskt och exporteras till Excel.
+
+    **Exempel:**  
+    - P1: 08:00–16:00, P2: 08:00–12:00  
+    - Pass 13:00–14:00 → kan inte tilldelas P2  
+    - P1 och P3 är tillgängliga → väljs den med minst antal pass hittills
     """)
 
 # --- GENERATE SCHEDULE ---
@@ -170,7 +194,11 @@ if st.button("Generera schema", key="generate_schedule"):
             # Pass times row
             html += "<tr>"
             for pt in st.session_state.pass_times_display:
-                html += f"<td style='border:1px solid white;width:{cell_width}%;height:20px;padding:2px;text-align:center;font-size:12px;background-color:#f0f0f0;'>{pt}</td>"
+                html += (
+                    f"<td style='border:1px solid black;width:{cell_width}%;height:25px;"
+                    f"padding:2px;text-align:center;font-size:12px;"
+                    f"background-color:#28a745;color:white;vertical-align:middle;'>{pt}</td>"
+                )
             html += "</tr>"
             # Person row
             html += "<tr>"
@@ -179,7 +207,7 @@ if st.button("Generera schema", key="generate_schedule"):
                 person = passes[p]
                 color = farger.get(person, "#FFFFFF")
                 html += (
-                    f"<td style='border:1px solid white;width:{cell_width}%;height:60px;padding:4px;"
+                    f"<td style='border:1px solid black;width:{cell_width}%;height:60px;padding:4px;"
                     f"background-color:{color};color:black;text-align:center;vertical-align:middle;"
                     f"word-wrap:break-word;overflow:hidden;font-size:14px;'>{person}</td>"
                 )
