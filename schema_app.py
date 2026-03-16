@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as st 
 import pandas as pd
 import random
 from io import BytesIO
@@ -167,13 +167,19 @@ Genereras för att vara så rättvist som möjligt och efter kriterierna att:
 
 # --- SUMMARY BOX ---
 st.markdown("---")
-st.markdown(f"**📌 Snabbcheck:** {len(namn)} personer, {pass_per_day} pass per dag, {antal_veckor} veckor → totalt {totalt_pass_per_person} pass.")
+st.markdown(
+    f"**📌 Snabbcheck:** {len(namn)} personer, {pass_per_day} pass per dag, "
+    f"{antal_veckor} veckor → totalt {totalt_pass_per_person} pass.  \n"
+    f"Arbetstid: {start_day_time.strftime('%H:%M')}–{end_day_time.strftime('%H:%M')} "
+    f"({pass_langd} min/pass). Max {max_pass_per_person_per_day} pass/person/dag."
+)
 
 # --- GENERATE SCHEDULE ---
 if st.button("Generera schema", key="generate_schedule"):
     schema = skapa_schema()
     cell_width = 100 / pass_per_day
 
+    # --- DISPLAY SCHEDULE ---
     for vecka, dagar in schema.items():
         st.subheader(vecka)
         for dag, passes in dagar.items():
@@ -204,6 +210,27 @@ if st.button("Generera schema", key="generate_schedule"):
     for n in namn:
         legend_html += f"<span style='background-color:{farger[n]};padding:3px 6px;margin-right:4px;border-radius:3px;'>{n}</span>"
     st.markdown(legend_html, unsafe_allow_html=True)
+
+    # --- COUNT PASSES PER PERSON ---
+    pass_count = {n: 0 for n in namn}
+    pass_minutes = {n: 0 for n in namn}
+
+    for vecka, dagar in schema.items():
+        for dag, passes in dagar.items():
+            for i in range(pass_per_day):
+                person = passes[f"Pass {i+1}"]
+                if person != "Ingen tillgänglig":
+                    pass_count[person] += 1
+                    start_min = pd.to_datetime(st.session_state.pass_times_display[i].split("–")[0])
+                    end_min = pd.to_datetime(st.session_state.pass_times_display[i].split("–")[1])
+                    pass_minutes[person] += int((end_min - start_min).total_seconds() / 60)
+
+    # --- DISPLAY PASS SUMMARY ---
+    summary_html = "<p><b>📊 Pass per person:</b> "
+    for n in namn:
+        hours, minutes = divmod(pass_minutes[n], 60)
+        summary_html += f"<span style='margin-right:10px;'>{n} ({pass_count[n]} pass, {hours:02d}:{minutes:02d} h)</span>"
+    st.markdown(summary_html, unsafe_allow_html=True)
 
     # --- EXCEL EXPORT ---
     output = BytesIO()
