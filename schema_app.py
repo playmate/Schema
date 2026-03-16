@@ -1,4 +1,4 @@
-```python
+
 import streamlit as st
 import pandas as pd
 import random
@@ -306,4 +306,3 @@ if st.button("Generera schema"):
         file_name="schema.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-```
