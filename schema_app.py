@@ -159,9 +159,10 @@ with st.expander("ℹ️ Information", expanded=False):
 Genereras för att vara så rättvist som möjligt och efter kriterierna att:  
    - Personen inte redan har max antal pass per dag  
    - Personen inte fick samma föregående dag  
-   - Passet hamnar inom personens arbetstider  
-     
-   Om flera kandidater är tillgängliga så väljs en med minst antal pass  
+   - Passet hamnar inom personens arbetstider 
+   - Försöker att sprida ut första & sista-pass så mycket som möjligt
+   
+   Om flera personer är tillgängliga så väljs en med minst antal pass  
 
 """)
 
