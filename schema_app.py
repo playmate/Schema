@@ -207,11 +207,16 @@ if st.button("Generera schema", key="generate_schedule"):
             html += "</tr></table>"
             st.markdown(html, unsafe_allow_html=True)
 
-    # --- COLOR LEGEND ---
-    legend_html = "<p><b>Färger:</b> "
-    for n in namn:
-        legend_html += f"<span style='background-color:{farger[n]};padding:3px 6px;margin-right:4px;border-radius:3px;'>{n}</span>"
-    st.markdown(legend_html, unsafe_allow_html=True)
+
+# --- COLOR LEGEND WITH BLACK TEXT & WHITE BORDER ---
+legend_html = "<div style='display:flex;gap:4px;margin-top:10px;'>"
+for n in namn:
+    legend_html += (
+        f"<div style='background-color:{farger[n]};color:black;"
+        f"padding:3px 6px;border:1px solid white;border-radius:3px;text-align:center;'>"
+        f"{n}</div>"
+    )
+st.markdown(legend_html, unsafe_allow_html=True)
 
     # --- COUNT PASSES PER PERSON ---
     pass_count = {n: 0 for n in namn}
