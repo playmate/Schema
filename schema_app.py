@@ -58,6 +58,17 @@ if st.button("Lägg till person"):
 
 namn = st.session_state.people
 
+# --- Personal start/end times ---
+st.subheader("Arbetstider per person")
+
+start_tid = {}
+slut_tid = {}
+
+for n in namn:
+    st.markdown(f"**{n}**")
+    start_tid[n] = st.time_input(f"{n} börjar jobba", value=pd.to_datetime("08:00").time(), key=f"start_{n}")
+    slut_tid[n] = st.time_input(f"{n} slutar jobba", value=pd.to_datetime("16:00").time(), key=f"slut_{n}")
+
 # --- General parameters ---
 veckodagar = ["Måndag","Tisdag","Onsdag","Torsdag","Fredag"]
 antal_veckor = 4
@@ -71,34 +82,38 @@ default_colors = [
 farger = {n: default_colors[i % len(default_colors)] for i, n in enumerate(namn)}
 farger["Ingen tillgänglig"] = "#E0E0E0"
 
-# --- Schedule generator ---
+# --- Fair schedule generator ---
 def skapa_schema():
     schema = {f"Vecka {v+1}": {dag:{} for dag in veckodagar} for v in range(antal_veckor)}
-    max_pass_per_person = {n: totalt_pass_per_person for n in namn}
-    pass_raknare = {n:0 for n in namn}
+    pass_raknare = {n:0 for n in namn}  # total assigned passes
     pass_start_times = [start_day + pd.Timedelta(minutes=i*pass_langd) for i in range(pass_per_day)]
 
     for vecka in range(antal_veckor):
         used_passes_per_person = {n:set() for n in namn}
+
         for dag in veckodagar:
             daily_count = {n:0 for n in namn}
             tidigare_pass = schema[f"Vecka {vecka+1}"][dag]
+
             for p_idx in range(pass_per_day):
                 p = f"Pass {p_idx+1}"
                 last_person = list(tidigare_pass.values())[-1] if tidigare_pass else None
                 pass_time = pass_start_times[p_idx].time()
 
+                # Available people based on personal start/end
                 tillgangliga = [
                     n for n in namn
                     if daily_count[n] < max_pass_per_person_per_day
                     and n != last_person
                     and p not in used_passes_per_person[n]
-                    and pass_raknare[n] < max_pass_per_person[n]
-                    and start_day.time() <= pass_time < end_day.time()
+                    and start_tid[n] <= pass_time < slut_tid[n]
                 ]
 
                 if tillgangliga:
-                    vald = random.choice(tillgangliga)
+                    # Choose the person with the least total assigned passes so far
+                    min_passes = min(pass_raknare[n] for n in tillgangliga)
+                    candidates = [n for n in tillgangliga if pass_raknare[n] == min_passes]
+                    vald = random.choice(candidates)
                     daily_count[vald] += 1
                     used_passes_per_person[vald].add(p)
                     pass_raknare[vald] += 1
