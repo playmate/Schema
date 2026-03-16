@@ -25,24 +25,26 @@ div.stButton > button:first-child {
 
 # --- SCHEDULE SETTINGS ---
 with st.expander("⚙️ Schemainställningar", expanded=True):
-    # Row 1: Starttid, Sluttid
     col1, col2 = st.columns([1,1])
     with col1:
-        start_day_time = st.time_input("Starttid", value=pd.to_datetime("08:00").time())
+        start_day_time = st.time_input("Starttid", value=pd.to_datetime("08:00").time(),
+                                       help="När arbetsdagen börjar")
     with col2:
-        end_day_time = st.time_input("Sluttid", value=pd.to_datetime("16:00").time())
-    
-    # Row 2: Pass per dag, Max pass per person
+        end_day_time = st.time_input("Sluttid", value=pd.to_datetime("16:00").time(),
+                                     help="När arbetsdagen slutar")
+
     col3, col4 = st.columns([1,1])
     with col3:
-        pass_per_day = st.number_input("Pass per dag", min_value=1, value=8, step=1)
+        pass_per_day = st.number_input("Pass per dag", min_value=1, value=8, step=1,
+                                       help="Hur många pass ska schemaläggas per dag")
     with col4:
         max_pass_per_person_per_day = st.number_input(
-            "Max antal pass per person per dag:", min_value=1, value=2, step=1
+            "Max antal pass per person per dag:", min_value=1, value=2, step=1,
+            help="Max antal pass en person kan få per dag"
         )
-    
-    # Row 3: Antal veckor
-    antal_veckor = st.number_input("Schema för # antal veckor", min_value=1, value=4, step=1)
+
+    antal_veckor = st.number_input("Schema för # antal veckor", min_value=1, value=4, step=1,
+                                   help="Hur många veckor schemat ska genereras för")
 
     start_day = pd.to_datetime(start_day_time.strftime("%H:%M"))
     end_day = pd.to_datetime(end_day_time.strftime("%H:%M"))
@@ -50,8 +52,8 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
     pass_langd = total_minutes // pass_per_day
     st.text(f"Passlängd: {pass_langd} min")
 
-    # Manual pass times
-    manual_times = st.checkbox("Justera passens start & sluttid manuellt")
+    manual_times = st.checkbox("Justera passens start & sluttid manuellt",
+                               help="Kryssa i om du vill skriva egna tider för varje pass")
     if manual_times:
         if "pass_times_manual" not in st.session_state:
             st.session_state.pass_times_manual = [
@@ -81,7 +83,6 @@ with st.expander("👤 Personal", expanded=True):
 
     new_people_list = []
     for i, n in enumerate(st.session_state.people):
-        # Uniform row layout
         cols = st.columns([3,2,2,0.5])
         name_input = cols[0].text_input("Namn", value=n, key=f"name_{i}")
         start_time = cols[1].time_input("Börjar jobba", value=pd.to_datetime("08:00").time(), key=f"start_{i}")
@@ -94,7 +95,6 @@ with st.expander("👤 Personal", expanded=True):
     st.session_state.people = new_people_list
     namn = st.session_state.people
 
-    # Store personal start/end times
     if "start_tid" not in st.session_state:
         st.session_state.start_tid = {n: pd.to_datetime("08:00").time() for n in namn}
     if "slut_tid" not in st.session_state:
@@ -152,25 +152,26 @@ def skapa_schema():
                 schema[f"Vecka {vecka+1}"][dag][p] = vald
     return schema
 
-# --- DETAILED VARIABLES EXPLAINED ---
-with st.expander("ℹ️ Information", expanded=False):
+# --- EXPLANATION SECTION ---
+with st.expander("ℹ️ Använda variabler", expanded=False):
     st.markdown("""
-  
-    Schemalägger alla tillgängliga personer som uppfyller kriterier:  
-       - Ej uppnått max antal pass per dag  
-       - Inte tilldelad det passet föregående dag
-       - Pass inom personliga arbetstiden 
-       - Minst antal pass hittills  
-    
-    **Exempel:**  
-       - Person1: 08:00–16:00, Person2: 08:00–12:00  
-       - Pass 13:00–14:00 → kan inte tilldelas Person2  
-       - Om Person1 och Person3 är tillgängliga så väljs den med minst antal pass hittills
+**Schemaläggningslogik:**  
+1. Alla personer måste uppfylla kriterier:  
+   - Ej max pass per dag  
+   - Ej samma pass som sist  
+   - Inom personliga arbetstider  
+   - Minst antal pass hittills  
+2. Om flera kandidater → välj en med minst antal pass (rättvisa)  
+3. Om ingen tillgänglig → "Ingen tillgänglig"
 
-    Schemat försöker fördela passen för att det ska bli så jämnt som möjligt.  
-    Vid flera tillgängliga väljs den med hittils minst antal pass.
+**Exempel:**  
+- Person2 slutar 12:00 → inga pass efter 12:00 tilldelas Person2  
+- Passfördelning försöker bli jämn mellan alla
+""")
 
-    """)
+# --- SUMMARY BOX ---
+st.markdown("---")
+st.markdown(f"**📌 Summering före generering:** {len(namn)} personer, {pass_per_day} pass per dag, {antal_veckor} veckor → totalt {totalt_pass_per_person} pass per person.")
 
 # --- GENERATE SCHEDULE ---
 if st.button("Generera schema", key="generate_schedule"):
@@ -181,7 +182,6 @@ if st.button("Generera schema", key="generate_schedule"):
         st.subheader(vecka)
         for dag, passes in dagar.items():
             html = f"<h5>{dag}</h5><table style='border-collapse:collapse;width:100%;table-layout:fixed;'>"
-            # Pass times row
             html += "<tr>"
             for pt in st.session_state.pass_times_display:
                 html += (
@@ -190,7 +190,6 @@ if st.button("Generera schema", key="generate_schedule"):
                     f"background-color:#28a745;color:white;vertical-align:middle;'>{pt}</td>"
                 )
             html += "</tr>"
-            # Person row
             html += "<tr>"
             for p_idx in range(pass_per_day):
                 p = f"Pass {p_idx+1}"
@@ -223,7 +222,7 @@ if st.button("Generera schema", key="generate_schedule"):
         header_format = workbook.add_format({"bold":True,"border":1,"align":"center"})
         worksheet.write(0,0,"Dag",header_format)
         for i in range(pass_per_day):
-            worksheet.write(0,i+1,f"Pass {i+1}",header_format)
+            worksheet.write(0,i+1,st.session_state.pass_times_display[i],header_format)
             worksheet.set_column(i+1,i+1,18)
         row = 1
         for vecka, dagar in schema.items():
