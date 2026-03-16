@@ -37,37 +37,44 @@ max_pass_per_person_per_day = st.number_input(
     step=1
 )
 
-# --- Editable list of people ---
+# --- Personal section (names + working hours) ---
+st.subheader("Personal")
+
 if "people" not in st.session_state:
     st.session_state.people = [f"P{i+1}" for i in range(9)]
 
-st.subheader("Hantera personer:")
-
 new_people_list = []
+
 for i, n in enumerate(st.session_state.people):
-    cols = st.columns([4,1])
-    name_input = cols[0].text_input(f"Person {i+1}", value=n, key=f"name_{i}")
+    st.markdown(f"**Person {i+1}**")
+    cols = st.columns([4, 1])
+    name_input = cols[0].text_input(f"Namn", value=n, key=f"name_{i}")
     remove = cols[1].button("X", key=f"remove_{i}")
+
+    start_tid = st.time_input(f"{name_input} börjar jobba", value=pd.to_datetime("08:00").time(), key=f"start_{i}")
+    slut_tid = st.time_input(f"{name_input} slutar jobba", value=pd.to_datetime("16:00").time(), key=f"slut_{i}")
+
     if not remove:
         new_people_list.append(name_input)
 
 st.session_state.people = new_people_list
+namn = st.session_state.people
 
 if st.button("Lägg till person"):
     st.session_state.people.append(f"Namn {len(st.session_state.people)+1}")
 
-namn = st.session_state.people
-
-# --- Personal start/end times ---
-st.subheader("Arbetstider per person")
-
-start_tid = {}
-slut_tid = {}
+# Store personal start/end times
+if "start_tid" not in st.session_state:
+    st.session_state.start_tid = {n: pd.to_datetime("08:00").time() for n in namn}
+if "slut_tid" not in st.session_state:
+    st.session_state.slut_tid = {n: pd.to_datetime("16:00").time() for n in namn}
 
 for n in namn:
-    st.markdown(f"**{n}**")
-    start_tid[n] = st.time_input(f"{n} börjar jobba", value=pd.to_datetime("08:00").time(), key=f"start_{n}")
-    slut_tid[n] = st.time_input(f"{n} slutar jobba", value=pd.to_datetime("16:00").time(), key=f"slut_{n}")
+    st.session_state.start_tid[n] = st.session_state.start_tid.get(n, pd.to_datetime("08:00").time())
+    st.session_state.slut_tid[n] = st.session_state.slut_tid.get(n, pd.to_datetime("16:00").time())
+
+start_tid = st.session_state.start_tid
+slut_tid = st.session_state.slut_tid
 
 # --- General parameters ---
 veckodagar = ["Måndag","Tisdag","Onsdag","Torsdag","Fredag"]
@@ -110,7 +117,7 @@ def skapa_schema():
                 ]
 
                 if tillgangliga:
-                    # Choose the person with the least total assigned passes so far
+                    # Fair selection: choose person with fewest total passes
                     min_passes = min(pass_raknare[n] for n in tillgangliga)
                     candidates = [n for n in tillgangliga if pass_raknare[n] == min_passes]
                     vald = random.choice(candidates)
