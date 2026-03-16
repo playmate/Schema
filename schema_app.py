@@ -1,3 +1,4 @@
+```python
 import streamlit as st
 import pandas as pd
 import random
@@ -8,26 +9,6 @@ st.title("Generera schema")
 # --- Settings ---
 st.subheader("Schemainställningar:")
 
-# --- Schematider (new) ---
-st.markdown("**Schematider**")
-
-start_day_time = st.time_input(
-    "Starttid",
-    value=pd.to_datetime("08:00").time(),
-    key="schematid_start"
-)
-end_day_time = st.time_input(
-    "Sluttid",
-    value=pd.to_datetime("16:00").time(),
-    key="schematid_slut"
-)
-
-start_day = pd.to_datetime(start_day_time.strftime("%H:%M"))
-end_day = pd.to_datetime(end_day_time.strftime("%H:%M"))
-
-total_minutes = int((end_day - start_day).total_seconds() / 60)
-
-# --- Passlängd ---
 pass_langd = st.number_input(
     "Passlängd (minuter)",
     min_value=5,
@@ -35,10 +16,6 @@ pass_langd = st.number_input(
     step=5
 )
 
-antal_pass = total_minutes // pass_langd
-st.write(f"Antal pass per dag: **{antal_pass}**")
-
-# --- Max pass per person per day ---
 max_pass_per_person_per_day = st.number_input(
     "Max antal pass per person per dag:",
     min_value=1,
@@ -46,11 +23,20 @@ max_pass_per_person_per_day = st.number_input(
     step=1
 )
 
+# Fixed workday
+start_day = pd.to_datetime("08:00")
+end_day = pd.to_datetime("16:00")
+
+total_minutes = int((end_day - start_day).total_seconds() / 60)
+antal_pass = total_minutes // pass_langd
+
+st.write(f"Antal pass per dag: **{antal_pass}**")
+
 # --- Editable list of people ---
 if "people" not in st.session_state:
     st.session_state.people = [
-        "Amanda","Anna-Karin","Cecilia","Elisabeth",
-        "Frida","Hanna","Lena","Marie","Marja"
+        "P1","P2","P3","P4",
+        "P5","P6","P7","P8","P9"
     ]
 
 st.subheader("Hantera personer:")
@@ -128,11 +114,7 @@ farger = {n: default_colors[i % len(default_colors)] for i,n in enumerate(namn)}
 farger["Ingen tillgänglig"] = "#E0E0E0"
 
 # --- Schedule generator ---
-@st.cache_data
-def skapa_schema(namn, arbetsandel, start_tid, slut_tid, pass_langd,
-                 max_pass_per_person_per_day, antal_pass,
-                 totalt_pass_per_person, antal_veckor, veckodagar,
-                 start_day):
+def skapa_schema():
 
     schema = {
         f"Vecka {v+1}": {dag:{} for dag in veckodagar}
@@ -167,19 +149,25 @@ def skapa_schema(namn, arbetsandel, start_tid, slut_tid, pass_langd,
                 pass_time = pass_start_times[p_idx].time()
 
                 tillgangliga = [
+
                     n for n in namn
-                    if daily_count[n] < max_pass_per_person_per_person
+
+                    if daily_count[n] < max_pass_per_person_per_day
                     and n != last_person
                     and p not in used_passes_per_person[n]
                     and pass_raknare[n] < max_pass_per_person[n]
                     and start_tid[n] <= pass_time < slut_tid[n]
+
                 ]
 
                 if tillgangliga:
+
                     vald = random.choice(tillgangliga)
+
                     daily_count[vald] += 1
                     used_passes_per_person[vald].add(p)
                     pass_raknare[vald] += 1
+
                 else:
                     vald = "Ingen tillgänglig"
 
@@ -187,23 +175,11 @@ def skapa_schema(namn, arbetsandel, start_tid, slut_tid, pass_langd,
 
     return schema
 
+
 # --- Generate schedule ---
 if st.button("Generera schema"):
 
-    schema = skapa_schema(
-        namn,
-        arbetsandel,
-        start_tid,
-        slut_tid,
-        pass_langd,
-        max_pass_per_person_per_day,
-        antal_pass,
-        totalt_pass_per_person,
-        antal_veckor,
-        veckodagar,
-        start_day
-    )
-
+    schema = skapa_schema()
     cell_width = 100 / antal_pass
 
     for vecka, dagar in schema.items():
@@ -330,3 +306,4 @@ if st.button("Generera schema"):
         file_name="schema.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+```
