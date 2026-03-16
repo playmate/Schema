@@ -167,7 +167,7 @@ Genereras för att vara så rättvist som möjligt och efter kriterierna att:
 
 # --- SUMMARY BOX ---
 st.markdown("---")
-st.markdown(f"**📌 Summering före generering:** {len(namn)} personer, {pass_per_day} pass per dag, {antal_veckor} veckor → totalt {totalt_pass_per_person} pass per person.")
+st.markdown(f"**📌 Snabbcheck:** {len(namn)} personer, {pass_per_day} pass per dag, {antal_veckor} veckor → totalt {totalt_pass_per_person} pass.")
 
 # --- GENERATE SCHEDULE ---
 if st.button("Generera schema", key="generate_schedule"):
