@@ -35,8 +35,8 @@ st.write(f"Antal pass per dag: **{antal_pass}**")
 # --- Editable list of people ---
 if "people" not in st.session_state:
     st.session_state.people = [
-        "1","2","3","4",
-        "5","6","7","8","9"
+        "#1","#2","#3","#4",
+        "#5","#6","#7","#8","#9"
     ]
 
 st.subheader("Hantera personer:")
