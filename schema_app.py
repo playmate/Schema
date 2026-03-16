@@ -146,41 +146,26 @@ def skapa_schema():
     return schema
 
 # --- DETAILED VARIABLES EXPLAINED ---
-with st.expander("Använda variabler", expanded=False):
+with st.expander("ℹ️ Information", expanded=False):
     st.markdown("""
-    Här är en detaljerad förklaring av hur schemat skapas och vad de olika inställningarna betyder:
+    
+    Schemalägger tillgängliga personer som uppfyller kriterier:  
+       - Ej max antal pass uppnådda den dagen
+       - Inte bli tilldelad samma pass som föregående dag  
+       - Inte två pass i rad
+       - Pass inom angivna arbetstiden  
+       - Minst antal pass hittills 
 
     **Antal pass per dag:** Bestämmer hur många pass som schemaläggs under en arbetsdag.  
     Exempel: 08:00–16:00 med 8 pass = 60 minuter per pass.
 
     **Passlängd:** Beräknas automatiskt utifrån start- och sluttid och antal pass.  
-    Du kan också manuellt ange start- och sluttider för varje pass.
-
-    **Max antal pass per person per dag:** Begränsar hur många pass en person kan få på en dag.
+    Du kan manuellt justera start- och sluttider för varje pass genom att klicka i checkboxen.
 
     **Personliga arbetstider:** Varje person har start- och sluttid.  
-    Exempel: P2 slutar kl 12:00 → inga pass efter 12:00 tilldelas P2.
+    Exempel: Person2 slutar kl 12:00 → inga pass efter 12:00 tilldelas Person2.
 
-    **Rättvisa:** Schemat försöker jämnt fördela passen.  
-    Vid flera tillgängliga kandidater väljs den med minst antal pass hittills.
 
-    **Manuella pass-tider:** Om du aktiverar detta kan du skriva in start/slut-tider för varje pass.
-
-    **Logik steg för steg:**  
-    1. Vecka → dag → pass  
-    2. Lista alla tillgängliga personer som uppfyller kriterier:  
-       - Ej max pass per dag  
-       - Inte sist tilldelad samma pass  
-       - Pass inom arbetstid  
-       - Minst antal pass hittills (rättvisa)  
-    3. Om ingen uppfyller kriterier → "Ingen tillgänglig"  
-    4. Färgläggning sker automatiskt och exporteras till Excel.
-
-    **Exempel:**  
-    - P1: 08:00–16:00, P2: 08:00–12:00  
-    - Pass 13:00–14:00 → kan inte tilldelas P2  
-    - P1 och P3 är tillgängliga → väljs den med minst antal pass hittills
-    """)
 
 # --- GENERATE SCHEDULE ---
 if st.button("Generera schema", key="generate_schedule"):
