@@ -165,7 +165,7 @@ with st.expander("ℹ️ Information", expanded=False):
     **Personliga arbetstider:** Varje person har start- och sluttid.  
     Exempel: Person2 slutar kl 12:00 → inga pass efter 12:00 tilldelas Person2.
 
-
+""")
 
 # --- GENERATE SCHEDULE ---
 if st.button("Generera schema", key="generate_schedule"):
