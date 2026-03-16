@@ -137,7 +137,7 @@ def skapa_schema():
     return schema
 
 # --- GENERATE SCHEDULE ---
-with st.expander("📊 Genererat schema", expanded=True):
+with st.expander("📊 Generera schema", expanded=True):
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("Generera schema"):
         schema = skapa_schema()
