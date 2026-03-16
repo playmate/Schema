@@ -77,7 +77,7 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
         ]
 
 # --- PERSONAL SECTION ---
-with st.expander("👤 Personal", expanded=True):
+with st.expander("👤 Personal", expanded=False):
     if "people" not in st.session_state:
         st.session_state.people = [f"P{i+1}" for i in range(9)]
 
@@ -153,20 +153,16 @@ def skapa_schema():
     return schema
 
 # --- EXPLANATION SECTION ---
-with st.expander("ℹ️ Använda variabler", expanded=False):
+with st.expander("ℹ️ Information", expanded=False):
     st.markdown("""
-**Schemaläggningslogik:**  
-1. Alla personer måste uppfylla kriterier:  
-   - Ej max pass per dag  
-   - Ej samma pass som sist  
-   - Inom personliga arbetstider  
-   - Minst antal pass hittills  
-2. Om flera kandidater → välj en med minst antal pass (rättvisa)  
-3. Om ingen tillgänglig → "Ingen tillgänglig"
 
-**Exempel:**  
-- Person2 slutar 12:00 → inga pass efter 12:00 tilldelas Person2  
-- Passfördelning försöker bli jämn mellan alla
+Genereras för att vara så rättvist som möjligt och efter kriterierna att:  
+   - Personen inte redan har max antal pass per dag  
+   - Personen inte fick samma föregående dag  
+   - Passet hamnar inom personens arbetstider  
+     
+   Om flera kandidater är tillgängliga så väljs en med minst antal pass  
+
 """)
 
 # --- SUMMARY BOX ---
