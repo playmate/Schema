@@ -243,7 +243,7 @@ if st.button("Generera schema", key="generate_schedule"):
     st.markdown(summary_html, unsafe_allow_html=True)
 
     # --- COLOR LEGEND (BLACK TEXT, WHITE BORDER) ---
-    legend_html = "<div style='display:flex;gap:4px;margin-top:10px;'>"
+    legend_html = "<div style='display:flex;gap:4px;margin-top:10px;margin-bottom:10px;'>"
     for n in namn:
         legend_html += (
             f"<div style='background-color:{farger[n]};color:black;"
@@ -252,7 +252,8 @@ if st.button("Generera schema", key="generate_schedule"):
         )
     st.markdown(legend_html, unsafe_allow_html=True)
 
-    # --- EXCEL EXPORT ---
+    # --- EXCEL EXPORT BUTTON (PLACED AFTER SUMMARY AND LEGEND) ---
+    st.markdown("<br>", unsafe_allow_html=True)  # extra rad för separation
     output = BytesIO()
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
         workbook = writer.book
@@ -282,5 +283,7 @@ if st.button("Generera schema", key="generate_schedule"):
         label="⬇️ Ladda ner schemat som Excel",
         data=output.getvalue(),
         file_name="schema.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        key="download_excel",
+        help="Ladda ner hela schemat som en Excel-fil"
     )
