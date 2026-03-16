@@ -157,11 +157,11 @@ with st.expander("ℹ️ Information", expanded=False):
     st.markdown("""
 
 Genereras för att vara så rättvist som möjligt och efter kriterierna att:  
-   - Passet hamnar inom personens arbetstider 
    - Personen inte redan har max antal pass per dag  
    - Personen inte fick samma föregående dag  
-   - Försöker att frånkomma för många första/sista-pass på samma person så mycket som möjligt
-   - Om flera personer är tillgängliga så väljs en med minst antal pass  
+   - Passet hamnar inom personens arbetstider  
+     
+   Om flera kandidater är tillgängliga så väljs en med minst antal pass  
 
 """)
 
@@ -225,27 +225,27 @@ if st.button("Generera schema", key="generate_schedule"):
                     end_min = pd.to_datetime(st.session_state.pass_times_display[i].split("–")[1])
                     pass_minutes[person] += int((end_min - start_min).total_seconds() / 60)
 
-# --- DISPLAY PASS SUMMARY AS TABLE ---
-st.subheader("📊 Sammanställning: Pass per person")
+    # --- DISPLAY PASS SUMMARY AS TABLE ---
+    st.subheader("📊 Sammanställning: Pass per person")
 
-summary_html = "<table style='border-collapse:collapse;width:100%;table-layout:fixed;'>"
-summary_html += "<tr><th style='border:1px solid black;padding:4px;text-align:left;'>Person</th>"
-summary_html += "<th style='border:1px solid black;padding:4px;text-align:center;'>Antal pass</th>"
-summary_html += "<th style='border:1px solid black;padding:4px;text-align:center;'>Total tid (HH:MM)</th></tr>"
+    summary_html = "<table style='border-collapse:collapse;width:100%;table-layout:fixed;'>"
+    summary_html += "<tr><th style='border:1px solid black;padding:4px;text-align:left;'>Person</th>"
+    summary_html += "<th style='border:1px solid black;padding:4px;text-align:center;'>Antal pass</th>"
+    summary_html += "<th style='border:1px solid black;padding:4px;text-align:center;'>Total tid (HH:MM)</th></tr>"
 
-for n in namn:
-    hours, minutes = divmod(pass_minutes[n], 60)
-    color = farger.get(n, "#FFFFFF")
-    summary_html += (
-        f"<tr>"
-        f"<td style='border:1px solid black;padding:4px;background-color:{color};'>{n}</td>"
-        f"<td style='border:1px solid black;padding:4px;text-align:center;background-color:{color};'>{pass_count[n]}</td>"
-        f"<td style='border:1px solid black;padding:4px;text-align:center;background-color:{color};'>{hours:02d}:{minutes:02d}</td>"
-        f"</tr>"
-    )
-summary_html += "</table>"
+    for n in namn:
+        hours, minutes = divmod(pass_minutes[n], 60)
+        color = farger.get(n, "#FFFFFF")
+        summary_html += (
+            f"<tr>"
+            f"<td style='border:1px solid black;padding:4px;background-color:{color};'>{n}</td>"
+            f"<td style='border:1px solid black;padding:4px;text-align:center;background-color:{color};'>{pass_count[n]}</td>"
+            f"<td style='border:1px solid black;padding:4px;text-align:center;background-color:{color};'>{hours:02d}:{minutes:02d}</td>"
+            f"</tr>"
+        )
+    summary_html += "</table>"
 
-st.markdown(summary_html, unsafe_allow_html=True)
+    st.markdown(summary_html, unsafe_allow_html=True)
 
     # --- EXCEL EXPORT ---
     output = BytesIO()
