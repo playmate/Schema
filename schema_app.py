@@ -23,21 +23,26 @@ div.stButton > button:first-child {
 </style>
 """, unsafe_allow_html=True)
 
-# --- SCHEDULE SETTINGS ---
+# --- SCHEDULE SETTINGS (aligned vertically) ---
 with st.expander("⚙️ Schemainställningar", expanded=True):
-    col1, col2, col3, col4, col5 = st.columns(5)
+    # Row 1: Starttid, Sluttid
+    col1, col2 = st.columns([1,1])
     with col1:
         start_day_time = st.time_input("Starttid", value=pd.to_datetime("08:00").time())
     with col2:
         end_day_time = st.time_input("Sluttid", value=pd.to_datetime("16:00").time())
+    
+    # Row 2: Pass per dag, Max pass per person
+    col3, col4 = st.columns([1,1])
     with col3:
         pass_per_day = st.number_input("Pass per dag", min_value=1, value=8, step=1)
     with col4:
         max_pass_per_person_per_day = st.number_input(
             "Max antal pass per person per dag:", min_value=1, value=2, step=1
         )
-    with col5:
-        antal_veckor = st.number_input("Schema för # antal veckor", min_value=1, value=4, step=1)
+    
+    # Row 3: Antal veckor
+    antal_veckor = st.number_input("Schema för # antal veckor", min_value=1, value=4, step=1)
 
     start_day = pd.to_datetime(start_day_time.strftime("%H:%M"))
     end_day = pd.to_datetime(end_day_time.strftime("%H:%M"))
@@ -76,11 +81,12 @@ with st.expander("👤 Personal", expanded=True):
 
     new_people_list = []
     for i, n in enumerate(st.session_state.people):
-        cols = st.columns([3,2,2,1])
+        cols = st.columns([3,2,2,0.5])
         name_input = cols[0].text_input("Namn", value=n, key=f"name_{i}")
         start_time = cols[1].time_input("Börjar jobba", value=pd.to_datetime("08:00").time(), key=f"start_{i}")
         end_time = cols[2].time_input("Slutar jobba", value=pd.to_datetime("16:00").time(), key=f"slut_{i}")
-        remove = cols[3].button("❌", key=f"remove_{i}", help="Ta bort person")
+        with cols[3]:
+            remove = st.button("❌", key=f"remove_{i}", help="Ta bort person")
         if not remove:
             new_people_list.append(name_input)
 
@@ -146,26 +152,41 @@ def skapa_schema():
     return schema
 
 # --- DETAILED VARIABLES EXPLAINED ---
-with st.expander("ℹ️ Information", expanded=False):
+with st.expander("Använda variabler", expanded=False):
     st.markdown("""
-    
-    Schemalägger tillgängliga personer som uppfyller kriterier:  
-       - Ej max antal pass uppnådda den dagen
-       - Inte bli tilldelad samma pass som föregående dag  
-       - Inte två pass i rad
-       - Pass inom angivna arbetstiden  
-       - Minst antal pass hittills 
+    Här är en detaljerad förklaring av hur schemat skapas och vad de olika inställningarna betyder:
 
     **Antal pass per dag:** Bestämmer hur många pass som schemaläggs under en arbetsdag.  
     Exempel: 08:00–16:00 med 8 pass = 60 minuter per pass.
 
     **Passlängd:** Beräknas automatiskt utifrån start- och sluttid och antal pass.  
-    Du kan manuellt justera start- och sluttider för varje pass genom att klicka i checkboxen.
+    Du kan också manuellt ange start- och sluttider för varje pass.
+
+    **Max antal pass per person per dag:** Begränsar hur många pass en person kan få på en dag.
 
     **Personliga arbetstider:** Varje person har start- och sluttid.  
-    Exempel: Person2 slutar kl 12:00 → inga pass efter 12:00 tilldelas Person2.
+    Exempel: P2 slutar kl 12:00 → inga pass efter 12:00 tilldelas P2.
 
-""")
+    **Rättvisa:** Schemat försöker jämnt fördela passen.  
+    Vid flera tillgängliga kandidater väljs den med minst antal pass hittills.
+
+    **Manuella pass-tider:** Om du aktiverar detta kan du skriva in start/slut-tider för varje pass.
+
+    **Logik steg för steg:**  
+    1. Vecka → dag → pass  
+    2. Lista alla tillgängliga personer som uppfyller kriterier:  
+       - Ej max pass per dag  
+       - Inte sist tilldelad samma pass  
+       - Pass inom arbetstid  
+       - Minst antal pass hittills (rättvisa)  
+    3. Om ingen uppfyller kriterier → "Ingen tillgänglig"  
+    4. Färgläggning sker automatiskt och exporteras till Excel.
+
+    **Exempel:**  
+    - P1: 08:00–16:00, P2: 08:00–12:00  
+    - Pass 13:00–14:00 → kan inte tilldelas P2  
+    - P1 och P3 är tillgängliga → väljs den med minst antal pass hittills
+    """)
 
 # --- GENERATE SCHEDULE ---
 if st.button("Generera schema", key="generate_schedule"):
