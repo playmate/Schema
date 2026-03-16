@@ -225,12 +225,27 @@ if st.button("Generera schema", key="generate_schedule"):
                     end_min = pd.to_datetime(st.session_state.pass_times_display[i].split("–")[1])
                     pass_minutes[person] += int((end_min - start_min).total_seconds() / 60)
 
-    # --- DISPLAY PASS SUMMARY ---
-    summary_html = "<p><b>📊 Pass per person:</b> "
-    for n in namn:
-        hours, minutes = divmod(pass_minutes[n], 60)
-        summary_html += f"<span style='margin-right:10px;'>{n} ({pass_count[n]} pass, {hours:02d}:{minutes:02d} h)</span>"
-    st.markdown(summary_html, unsafe_allow_html=True)
+# --- DISPLAY PASS SUMMARY AS TABLE ---
+st.subheader("📊 Sammanställning: Pass per person")
+
+summary_html = "<table style='border-collapse:collapse;width:100%;table-layout:fixed;'>"
+summary_html += "<tr><th style='border:1px solid black;padding:4px;text-align:left;'>Person</th>"
+summary_html += "<th style='border:1px solid black;padding:4px;text-align:center;'>Antal pass</th>"
+summary_html += "<th style='border:1px solid black;padding:4px;text-align:center;'>Total tid (HH:MM)</th></tr>"
+
+for n in namn:
+    hours, minutes = divmod(pass_minutes[n], 60)
+    color = farger.get(n, "#FFFFFF")
+    summary_html += (
+        f"<tr>"
+        f"<td style='border:1px solid black;padding:4px;background-color:{color};'>{n}</td>"
+        f"<td style='border:1px solid black;padding:4px;text-align:center;background-color:{color};'>{pass_count[n]}</td>"
+        f"<td style='border:1px solid black;padding:4px;text-align:center;background-color:{color};'>{hours:02d}:{minutes:02d}</td>"
+        f"</tr>"
+    )
+summary_html += "</table>"
+
+st.markdown(summary_html, unsafe_allow_html=True)
 
     # --- EXCEL EXPORT ---
     output = BytesIO()
