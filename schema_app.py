@@ -343,4 +343,22 @@ if generate:
         worksheet = workbook.add_worksheet("Schema")
         writer.sheets["Schema"] = worksheet
         header_format = workbook.add_format({"bold": True, "border": 1, "align": "center"})
-        format_dict = {
+        format_dict = {person: workbook.add_format({"bg_color": color, "border": 1, "align": "center", "valign": "vcenter"}) for person, color in farger.items()}
+        worksheet.write(0,0,"Dag",header_format)
+        for i, (name, s, e) in enumerate(pass_times):
+            header_text = f"{s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}" if visa_tider and name != "Lunch" else ("Lunch" if name=="Lunch" else "")
+            worksheet.write(0,i+1,header_text,header_format)
+            worksheet.set_column(i+1,i+1,18)
+        row = 1
+        for vecka, dagar in schema.items():
+            worksheet.write(row,0,vecka)
+            row += 1
+            for dag, passes in dagar.items():
+                worksheet.write(row,0,dag)
+                for i, (name, s, e) in enumerate(pass_times):
+                    person = passes[name if name != "Lunch" else "Lunch"]
+                    worksheet.write(row,i+1,person,format_dict.get(person))
+                row += 1
+            row += 1
+    st.download_button(label="⬇️ Ladda ner schemat som Excel", data=output.getvalue(),
+                       file_name="schema.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
