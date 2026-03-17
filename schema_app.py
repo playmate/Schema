@@ -36,6 +36,10 @@ div.stButton > button:first-child {
     text-decoration: line-through;
     color: gray;
 }
+.day-separator {
+    border-top: 1px solid #e0e0e0;
+    margin: 4px 0;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -124,23 +128,25 @@ with st.expander("👤 Personal", expanded=True):
         with cols[0]:
             name_input = st.text_input("Namn", value=n, key=f"name_{i}")
         with cols[1]:
-            if st.button("✖", key=f"remove_{i}", help="Ta bort person", args=None):
+            if st.button("✖", key=f"remove_{i}", help="Ta bort person"):
                 remove_indices.append(i)
         namn[i] = name_input
 
-        # Dagars checkboxar och tider
         st.markdown("**Arbetstider per dag:**")
         for dag in veckodagar:
-            cols = st.columns([1,2,2])
+            cols = st.columns([0.2,0.5,2,2])
             with cols[0]:
                 available = st.checkbox("", value=True, key=f"available_{i}_{dag}")
                 dag_tillgang[name_input][dag] = available
             with cols[1]:
+                st.markdown(f"**{dag}**")  # Dagens namn efter checkbox
+            with cols[2]:
                 start = st.time_input(f"{dag} börjar", value=pd.to_datetime("08:00").time(), key=f"start_{i}_{dag}")
                 start_tid[name_input] = start
-            with cols[2]:
+            with cols[3]:
                 end = st.time_input(f"{dag} slutar", value=pd.to_datetime("16:00").time(), key=f"end_{i}_{dag}")
                 slut_tid[name_input] = end
+            st.markdown("<div class='day-separator'></div>", unsafe_allow_html=True)
 
     # Ta bort markerade personer
     for idx in sorted(remove_indices, reverse=True):
