@@ -255,7 +255,7 @@ def skapa_schema():
 col_gen = st.columns([1,1])
 with col_gen[0]:
     generate = st.button("Generera schema")
-with col_gen[1]:
+with col_gen[0]:
     visa_tider = st.checkbox("Visa tider i schemat", value=False)
 
 # --- GENERERA SCHEMA LOGIK ---
