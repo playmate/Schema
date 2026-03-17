@@ -159,7 +159,7 @@ if "work_times" not in st.session_state:
 dag_tillgang = st.session_state.dag_tillgang
 work_times = st.session_state.work_times
 
-with st.expander("👤 Personal", expanded=True):
+with st.expander("👤 Personal", expanded=False):
     col_add = st.columns([3,1])
     with col_add[0]:
         ny_person_namn = st.text_input("Lägg till person", "")
