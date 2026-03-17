@@ -151,7 +151,6 @@ with st.expander("👤 Personal", expanded=True):
         cols = st.columns([5,1])
         with cols[0]:
             nytt_namn = st.text_input("", value=n, key=f"edit_name_{n}")
-            # Uppdatera personnamn i session_state
             if nytt_namn != n and nytt_namn not in st.session_state.people:
                 # Uppdatera alla referenser
                 st.session_state.people[st.session_state.people.index(n)] = nytt_namn
@@ -269,14 +268,8 @@ if st.button("Generera schema"):
                 strike_class = ""
                 if person != "Ingen tillgänglig" and not dag_tillgang.get(person, {}).get(dag, True):
                     strike_class = "strike"
-                html += f"<td style='border:1px solid white;background:{color};text-align:center;height:60px' class='{strike_class}'>{person}</td>"
-
-                if person != "Ingen tillgänglig" and strike_class == "":
-                    start = pd.to_datetime(st.session_state.pass_times_display[i].split("–")[0])
-                    end = pd.to_datetime(st.session_state.pass_times_display[i].split("–")[1])
-                    week_pass_count[person] += 1
-                    week_minutes[person] += int((end-start).total_seconds()/60)
-
+                # Svart text med vit border
+                html += f"<td style='border:1px solid white;background:{color};color:black;text-align:center;height:60px;font-weight:bold;text-shadow: 1px 1px 0 #ffffff;' class='{strike_class}'>{person}</td>"
             html += "</tr></table>"
             st.markdown(html, unsafe_allow_html=True)
 
