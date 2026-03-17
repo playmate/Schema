@@ -206,12 +206,19 @@ with st.expander("👤 Personal", expanded=False):
                     work_times[n][dag] = (start_time, end_time)
             st.markdown("<div class='day-separator'></div>", unsafe_allow_html=True)
 
+    # --- FIX: Rensa session state innan rerun ---
     if st.session_state.remove_person:
         person_to_remove = st.session_state.remove_person
         if person_to_remove in st.session_state.people:
             st.session_state.people.remove(person_to_remove)
             st.session_state.dag_tillgang.pop(person_to_remove, None)
             st.session_state.work_times.pop(person_to_remove, None)
+            
+            # Ta bort alla session state-nycklar som innehåller personens namn
+            keys_to_delete = [key for key in st.session_state.keys() if person_to_remove in key]
+            for key in keys_to_delete:
+                del st.session_state[key]
+
         st.session_state.remove_person = None
         st.experimental_rerun()
 
