@@ -265,37 +265,7 @@ if generate:
     schema = skapa_schema()
     pass_times_display = [f"{s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}" if visa_tider else "" for name, s, e in pass_times]
 
-    for vecka, dagar in schema.items():
-        # --- Sammanställning per vecka i collapsible ---
-        with st.expander(f"{vecka} - sammanställning", expanded=False):
-            st.markdown("<b>Sammanställning av veckan:</b>", unsafe_allow_html=True)
-            vecka_summary = {n: {"count":0, "minutes":0} for n in st.session_state.people}
-            for dag, passes in dagar.items():
-                for name, _ in passes.items():
-                    person = passes[name]
-                    if person not in ["Lunch", "Ingen tillgänglig"]:
-                        vecka_summary[person]["count"] += 1
-                        # Lägg till minutantal
-                        start_dt, end_dt = next((s, e) for n2, s, e in pass_times if n2 == name)
-                        vecka_summary[person]["minutes"] += int((end_dt - start_dt).total_seconds() // 60)
-            # Bygg HTML-tabell
-            html_summary = "<table style='border-collapse:collapse;width:100%;'><tr>"
-            html_summary += "<th style='border:1px solid white;background:#CCCCCC;color:black;'>Namn</th>"
-            html_summary += "<th style='border:1px solid white;background:#CCCCCC;color:black;'>Antal pass</th>"
-            html_summary += "<th style='border:1px solid white;background:#CCCCCC;color:black;'>Total tid</th></tr>"
-            for person, data in vecka_summary.items():
-                timmar = data["minutes"] // 60
-                minuter = data["minutes"] % 60
-                total_tid = f"{timmar:02d}:{minuter:02d}"
-                color = farger.get(person, "#FFFFFF")
-                html_summary += f"<tr>"
-                html_summary += f"<td style='border:1px solid white;background:{color};color:black;text-align:center;font-weight:bold;'>{person}</td>"
-                html_summary += f"<td style='border:1px solid white;background:{color};color:black;text-align:center;font-weight:bold;'>{data['count']}</td>"
-                html_summary += f"<td style='border:1px solid white;background:{color};color:black;text-align:center;font-weight:bold;'>{total_tid}</td>"
-                html_summary += "</tr>"
-            html_summary += "</table>"
-            st.markdown(html_summary, unsafe_allow_html=True)
-
+    for vecka_index, (vecka, dagar) in enumerate(schema.items()):
         # --- Schemat visas alltid öppet ---
         st.subheader(vecka)
         for dag, passes in dagar.items():
@@ -313,6 +283,39 @@ if generate:
                     html += f"<td style='border:1px solid white;background:{color};color:black;text-align:center;height:60px;font-weight:bold;'>{person}</td>"
             html += "</tr></table>"
             st.markdown(html, unsafe_allow_html=True)
+
+        # --- Veckosammanställning i collapsible under schemat ---
+        with st.expander(f"{vecka} - sammanställning", expanded=False):
+            st.markdown("<b>Sammanställning av veckan:</b>", unsafe_allow_html=True)
+            vecka_summary = {n: {"count":0, "minutes":0} for n in st.session_state.people}
+            for dag, passes in dagar.items():
+                for name, _ in passes.items():
+                    person = passes[name]
+                    if person not in ["Lunch", "Ingen tillgänglig"]:
+                        vecka_summary[person]["count"] += 1
+                        start_dt, end_dt = next((s, e) for n2, s, e in pass_times if n2 == name)
+                        vecka_summary[person]["minutes"] += int((end_dt - start_dt).total_seconds() // 60)
+            # Bygg HTML-tabell med centrerade rubriker
+            html_summary = "<table style='border-collapse:collapse;width:100%;text-align:center;'><tr>"
+            html_summary += "<th style='border:1px solid white;background:#CCCCCC;color:black;text-align:center;'>Namn</th>"
+            html_summary += "<th style='border:1px solid white;background:#CCCCCC;color:black;text-align:center;'>Antal pass</th>"
+            html_summary += "<th style='border:1px solid white;background:#CCCCCC;color:black;text-align:center;'>Total tid</th></tr>"
+            for person, data in vecka_summary.items():
+                timmar = data["minutes"] // 60
+                minuter = data["minutes"] % 60
+                total_tid = f"{timmar:02d}:{minuter:02d}"
+                color = farger.get(person, "#FFFFFF")
+                html_summary += f"<tr>"
+                html_summary += f"<td style='border:1px solid white;background:{color};color:black;font-weight:bold;text-align:center'>{person}</td>"
+                html_summary += f"<td style='border:1px solid white;background:{color};color:black;font-weight:bold;text-align:center'>{data['count']}</td>"
+                html_summary += f"<td style='border:1px solid white;background:{color};color:black;font-weight:bold;text-align:center'>{total_tid}</td>"
+                html_summary += "</tr>"
+            html_summary += "</table>"
+            st.markdown(html_summary, unsafe_allow_html=True)
+
+        # --- Diskret linje mellan veckor ---
+        if vecka_index < len(schema)-1:
+            st.markdown("<hr style='border:1px solid #e0e0e0;margin:10px 0;'>", unsafe_allow_html=True)
 
     # --- EXCEL EXPORT ---
     output = BytesIO()
