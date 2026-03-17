@@ -188,22 +188,22 @@ with st.expander("👤 Personal", expanded=False):
             if st.button("✖", key=f"remove_{n}", help="Ta bort person"):
                 st.session_state.remove_person = n
 
-        # --- Kompakt layout per dag ---
+        # --- Kompakt dag med checkbox inline ---
         with st.expander(f"Arbetstider för {n}", expanded=False):
             for dag in veckodagar:
-                cols_day = st.columns([0.1,1,1])
-                with cols_day[0]:
-                    tillgang = st.checkbox("", value=dag_tillgang[n][dag], key=f"available_{n}_{dag}")
-                    dag_tillgang[n][dag] = tillgang
-                with cols_day[1]:
-                    dag_display = f"<span class='strike'>{dag}</span>" if not tillgang else dag
-                    st.markdown(dag_display, unsafe_allow_html=True)
-                if tillgang:
+                # Inline checkbox + dag
+                tillgang = st.checkbox(f"{dag}", value=dag_tillgang[n][dag], key=f"available_{n}_{dag}")
+                dag_tillgang[n][dag] = tillgang
+                if not tillgang:
+                    st.markdown(f"<span class='strike'>{dag}</span>", unsafe_allow_html=True)
+                else:
                     start_prev, end_prev = work_times[n][dag]
-                    with cols_day[2]:
-                        st_time = st.time_input("", value=start_prev, key=f"start_{n}_{dag}", step=900)
+                    cols_time = st.columns([1,1])
+                    with cols_time[0]:
+                        start_time = st.time_input("", value=start_prev, key=f"start_{n}_{dag}", step=900)
+                    with cols_time[1]:
                         end_time = st.time_input("", value=end_prev, key=f"end_{n}_{dag}", step=900)
-                        work_times[n][dag] = (st_time, end_time)
+                    work_times[n][dag] = (start_time, end_time)
 
     if st.session_state.remove_person:
         person_to_remove = st.session_state.remove_person
