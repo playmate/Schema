@@ -74,7 +74,7 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
     st.markdown("<hr style='border:1px solid #e0e0e0;margin-top:8px;margin-bottom:4px;'>", unsafe_allow_html=True)
 
     # --- Lunch ---
-    lunch_enabled = st.checkbox("Lunchrast")
+    lunch_enabled = st.checkbox("Lunchrast (obemannad tid)")
     lunch_start = lunch_end = None
     if lunch_enabled:
         col3, col4 = st.columns(2)
