@@ -126,7 +126,7 @@ dag_tillgang = st.session_state.dag_tillgang
 start_tid = st.session_state.start_tid
 slut_tid = st.session_state.slut_tid
 
-# --- Personal med lista och rött kryss ---
+# --- Personal med lista och rött kryss + collapse per person ---
 with st.expander("👤 Personal", expanded=True):
     # Lägg till ny person
     col_add = st.columns([3,1])
@@ -165,25 +165,25 @@ with st.expander("👤 Personal", expanded=True):
         st.session_state.remove_person = None
         st.experimental_rerun()
 
-    # Arbetstider per person
+    # Collapsible expander per person
     for n in st.session_state.people:
-        st.markdown(f"### {n}")
-        for dag in veckodagar:
-            cols = st.columns([0.2,0.5,0.5,0.5])
-            with cols[0]:
-                tillgang = st.checkbox("", value=st.session_state.dag_tillgang[n][dag], key=f"available_{n}_{dag}")
-                st.session_state.dag_tillgang[n][dag] = tillgang
-            with cols[1]:
-                st.markdown(f"**{dag}**" if tillgang else f"<span class='strike'>{dag}</span>", unsafe_allow_html=True)
-            with cols[2]:
-                st.time_input("Start", value=st.session_state.start_tid[n], key=f"start_{n}_{dag}", disabled=not tillgang)
-                if tillgang:
-                    st.session_state.start_tid[n] = st.session_state[f"start_{n}_{dag}"]
-            with cols[3]:
-                st.time_input("Slut", value=st.session_state.slut_tid[n], key=f"end_{n}_{dag}", disabled=not tillgang)
-                if tillgang:
-                    st.session_state.slut_tid[n] = st.session_state[f"end_{n}_{dag}"]
-        st.markdown("<div class='day-separator'></div>", unsafe_allow_html=True)
+        with st.expander(f"{n}", expanded=False):
+            for dag in veckodagar:
+                cols = st.columns([0.2,0.5,0.5,0.5])
+                with cols[0]:
+                    tillgang = st.checkbox("", value=st.session_state.dag_tillgang[n][dag], key=f"available_{n}_{dag}")
+                    st.session_state.dag_tillgang[n][dag] = tillgang
+                with cols[1]:
+                    st.markdown(f"**{dag}**" if tillgang else f"<span class='strike'>{dag}</span>", unsafe_allow_html=True)
+                with cols[2]:
+                    st.time_input("Start", value=st.session_state.start_tid[n], key=f"start_{n}_{dag}", disabled=not tillgang)
+                    if tillgang:
+                        st.session_state.start_tid[n] = st.session_state[f"start_{n}_{dag}"]
+                with cols[3]:
+                    st.time_input("Slut", value=st.session_state.slut_tid[n], key=f"end_{n}_{dag}", disabled=not tillgang)
+                    if tillgang:
+                        st.session_state.slut_tid[n] = st.session_state[f"end_{n}_{dag}"]
+            st.markdown("<div class='day-separator'></div>", unsafe_allow_html=True)
 
 # --- COLORS ---
 default_colors = [
