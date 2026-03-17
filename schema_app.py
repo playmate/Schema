@@ -63,6 +63,7 @@ div.stButton > button:first-child {
 # --- SCHEDULE SETTINGS ---
 with st.expander("⚙️ Schemainställningar", expanded=True):
 
+    # --- Arbetstid ---
     st.markdown("""<div style='font-weight:bold;margin-bottom:0px;'>Arbetstid</div>""", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
@@ -81,6 +82,10 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
         with col4:
             lunch_end = st.time_input("Slut", value=pd.to_datetime("13:00").time())
 
+    # --- Manual passtid direkt under lunch ---
+    manual_times = st.checkbox("Justera passens tider manuellt")
+
+    # --- Diskret linje efter lunchtid ---
     st.markdown("<hr style='border:1px solid #e0e0e0;margin-top:8px;margin-bottom:8px;'>", unsafe_allow_html=True)
 
     # --- Passinställningar ---
@@ -98,9 +103,6 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
 
     start_day = pd.to_datetime(start_day_time.strftime("%H:%M"))
     end_day = pd.to_datetime(end_day_time.strftime("%H:%M"))
-
-    # --- Manuell passtidsredigering ---
-    manual_times = st.checkbox("Justera passens tider manuellt")
 
     # --- Beräkna pass före och efter lunch ---
     segments = []
@@ -307,7 +309,6 @@ if st.button("Generera schema"):
             html += "</tr></table>"
             st.markdown(html, unsafe_allow_html=True)
 
-        # Veckosummering
         with st.expander("📊 Veckosummering", expanded=False):
             summary_html = "<table style='border-collapse:collapse;width:60%;'>"
             summary_html += "<tr><th>Person</th><th>Pass</th><th>Tid</th></tr>"
