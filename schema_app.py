@@ -156,12 +156,12 @@ with st.expander("👤 Personal", expanded=True):
                     st.time_input("", value=pd.to_datetime("16:00").time(), key=f"end_{i}_{dag}", disabled=True)
             st.markdown("<div class='day-separator'></div>", unsafe_allow_html=True)
 
-    # --- Ta bort markerade personer (fix för IndexError) ---
+    # --- Ta bort markerade personer (fix) ---
     for idx in sorted(remove_indices, reverse=True):
         person_to_remove = st.session_state.people[idx]
         st.session_state.people.pop(idx)        # ta bort från session_state
         if person_to_remove in namn:
-            namn.remove(person_to_remove)       # ta bort från namn-listan
+            namn.remove(person_to_remove)       # endast den personen
         dag_tillgang.pop(person_to_remove, None)
         start_tid.pop(person_to_remove, None)
         slut_tid.pop(person_to_remove, None)
@@ -187,11 +187,12 @@ farger["Ingen tillgänglig"] = "#E0E0E0"
 def skapa_schema():
     schema = {f"Vecka {v+1}": {dag:{} for dag in veckodagar} for v in range(antal_veckor)}
     pass_raknare = {n:0 for n in namn}
+    prev_day_assignments = {dag: {f"Pass {i+1}": None for i in range(pass_per_day)} for dag in veckodagar}
 
     for vecka in range(antal_veckor):
-        for dag in veckodagar:
+        for dag_idx, dag in enumerate(veckodagar):
             daily_count = {n:0 for n in namn}
-            prev_person = None  # hindra två pass i rad
+            prev_person = None
 
             for p_idx in range(pass_per_day):
                 p = f"Pass {p_idx+1}"
@@ -205,9 +206,15 @@ def skapa_schema():
                     and start_tid[n] <= pd.to_datetime(pass_time).time() < slut_tid[n]
                 ]
 
-                # Undvik två pass i rad
+                # Hindra två pass i rad samma dag
                 if prev_person in tillgangliga and len(tillgangliga) > 1:
                     tillgangliga.remove(prev_person)
+
+                # Hindra samma pass som föregående dag
+                if dag_idx > 0:
+                    prev_day_person = prev_day_assignments[veckodagar[dag_idx-1]][p]
+                    if prev_day_person in tillgangliga and len(tillgangliga) > 1:
+                        tillgangliga.remove(prev_day_person)
 
                 if tillgangliga:
                     min_pass = min(pass_raknare[n] for n in tillgangliga)
@@ -220,6 +227,10 @@ def skapa_schema():
 
                 schema[f"Vecka {vecka+1}"][dag][p] = vald
                 prev_person = vald
+
+            # Spara dagens pass för nästa dag
+            prev_day_assignments[dag] = schema[f"Vecka {vecka+1}"][dag]
+
     return schema
 
 # --- GENERATE SCHEDULE ---
