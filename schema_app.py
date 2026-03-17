@@ -43,20 +43,35 @@ div.stButton > button:first-child {
     border-top: 1px solid #e0e0e0;
     margin: 4px 0;
 }
+.lunch-cell {
+    background-color: #E0E0E0 !important;
+    background-image: repeating-linear-gradient(
+        45deg,
+        #E0E0E0,
+        #E0E0E0 5px,
+        #C0C0C0 5px,
+        #C0C0C0 10px
+    );
+    color: black !important;
+    font-weight: bold;
+    text-align: center;
+    height: 60px;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # --- SCHEDULE SETTINGS ---
 with st.expander("⚙️ Schemainställningar", expanded=True):
 
-    st.markdown("**Arbetstid**")
+    # --- Arbetstid ---
+    st.markdown("""<div style='font-weight:bold;margin-bottom:0px;'>Arbetstid</div>""", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
         start_day_time = st.time_input("", value=pd.to_datetime("08:00").time())
     with col2:
         end_day_time = st.time_input("", value=pd.to_datetime("16:00").time())
 
-    # Lunch
+    # --- Lunch ---
     lunch_enabled = st.checkbox("Lunchrast")
     lunch_start = lunch_end = None
     if lunch_enabled:
@@ -67,7 +82,10 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
         with col4:
             lunch_end = st.time_input("Slut", value=pd.to_datetime("13:00").time())
 
-    # Passinställningar
+    # --- Diskret linje efter lunchtid ---
+    st.markdown("<hr style='border:1px solid #e0e0e0;margin-top:8px;margin-bottom:8px;'>", unsafe_allow_html=True)
+
+    # --- Passinställningar ---
     col5, col6 = st.columns(2)
     with col5:
         pass_per_day = st.number_input("Pass per dag", min_value=1, value=8)
@@ -199,7 +217,7 @@ default_colors = [
 ]
 farger = {n: default_colors[i % len(default_colors)] for i, n in enumerate(st.session_state.people)}
 farger["Ingen tillgänglig"] = "#E0E0E0"
-farger["Lunch"] = "#FFD966"
+farger["Lunch"] = "#E0E0E0"
 
 # --- SCHEMA GENERATOR ---
 def skapa_schema():
@@ -261,15 +279,18 @@ if st.button("Generera schema"):
             html += "</tr><tr>"
             for name, start_dt, end_dt in pass_times:
                 person = passes[name if name != "Lunch" else "Lunch"]
-                color = farger.get(person,"white")
-                strike_class = ""
-                if person != "Ingen tillgänglig" and person != "Lunch" and not dag_tillgang.get(person, {}).get(dag, True):
-                    strike_class = "strike"
-                html += f"<td style='border:1px solid white;background:{color};color:black;text-align:center;height:60px;font-weight:bold;' class='{strike_class}'>{person}</td>"
+                if name == "Lunch":
+                    html += f"<td class='lunch-cell'>{person}</td>"
+                else:
+                    color = farger.get(person,"white")
+                    strike_class = ""
+                    if person != "Ingen tillgänglig" and not dag_tillgang.get(person, {}).get(dag, True):
+                        strike_class = "strike"
+                    html += f"<td style='border:1px solid white;background:{color};color:black;text-align:center;height:60px;font-weight:bold;' class='{strike_class}'>{person}</td>"
 
-                if person != "Ingen tillgänglig" and person != "Lunch" and strike_class == "":
-                    week_pass_count[person] += 1
-                    week_minutes[person] += int((end_dt - start_dt).total_seconds()/60)
+                    if person != "Ingen tillgänglig" and strike_class == "":
+                        week_pass_count[person] += 1
+                        week_minutes[person] += int((end_dt - start_dt).total_seconds()/60)
 
             html += "</tr></table>"
             st.markdown(html, unsafe_allow_html=True)
