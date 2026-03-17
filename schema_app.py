@@ -62,11 +62,6 @@ div.stButton > button:first-child {
     font-weight: bold;
     height: 40px;
 }
-.compact-time input[type="time"] {
-    padding: 2px !important;
-    height: 28px !important;
-    font-size: 12px !important;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -193,23 +188,22 @@ with st.expander("👤 Personal", expanded=False):
             if st.button("✖", key=f"remove_{n}", help="Ta bort person"):
                 st.session_state.remove_person = n
 
-        # --- Kompakt layout för arbetstider ---
+        # --- Kompakt layout per dag ---
         with st.expander(f"Arbetstider för {n}", expanded=False):
             for dag in veckodagar:
-                tillgang = st.checkbox("", value=dag_tillgang[n][dag], key=f"available_{n}_{dag}")
-                dag_tillgang[n][dag] = tillgang
-                dag_display = f"<span class='strike'>{dag}</span>" if not tillgang else dag
-                st.markdown(dag_display, unsafe_allow_html=True)
-
+                cols_day = st.columns([0.1,1,1])
+                with cols_day[0]:
+                    tillgang = st.checkbox("", value=dag_tillgang[n][dag], key=f"available_{n}_{dag}")
+                    dag_tillgang[n][dag] = tillgang
+                with cols_day[1]:
+                    dag_display = f"<span class='strike'>{dag}</span>" if not tillgang else dag
+                    st.markdown(dag_display, unsafe_allow_html=True)
                 if tillgang:
                     start_prev, end_prev = work_times[n][dag]
-                    # Samma rad för start och slut tid
-                    cols_time = st.columns([1,1], gap="small")
-                    with cols_time[0]:
-                        start_time = st.time_input("", value=start_prev, key=f"start_{n}_{dag}", step=900, label_visibility="collapsed")
-                    with cols_time[1]:
-                        end_time = st.time_input("", value=end_prev, key=f"end_{n}_{dag}", step=900, label_visibility="collapsed")
-                    work_times[n][dag] = (start_time, end_time)
+                    with cols_day[2]:
+                        st_time = st.time_input("", value=start_prev, key=f"start_{n}_{dag}", step=900)
+                        end_time = st.time_input("", value=end_prev, key=f"end_{n}_{dag}", step=900)
+                        work_times[n][dag] = (st_time, end_time)
 
     if st.session_state.remove_person:
         person_to_remove = st.session_state.remove_person
@@ -222,6 +216,3 @@ with st.expander("👤 Personal", expanded=False):
                 del st.session_state[key]
         st.session_state.remove_person = None
         st.experimental_rerun()
-
-# --- Resten av scriptet (schemagenerator, färgkodning, Excel-export, veckosammanställning) ---
-# ... (kan återanvändas från tidigare fullständiga version)
