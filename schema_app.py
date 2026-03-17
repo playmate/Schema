@@ -285,4 +285,4 @@ if st.button("Generera schema"):
         data=output.getvalue(),
         file_name="schema.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    ) 
