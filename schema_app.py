@@ -114,15 +114,15 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
 # --- PERSONAL ---
 veckodagar = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag"]
 
+# Initiera session_state om inte redan gjort
 if "people" not in st.session_state:
     st.session_state.people = [f"P{i+1}" for i in range(9)]
 if "dag_tillgang" not in st.session_state:
     st.session_state.dag_tillgang = {n: {dag: True for dag in veckodagar} for n in st.session_state.people}
 if "work_times" not in st.session_state:
-    st.session_state.work_times = {
-        n: {dag: (pd.to_datetime("08:00").time(), pd.to_datetime("16:00").time()) for dag in veckodagar}
-        for n in st.session_state.people
-    }
+    st.session_state.work_times = {n: {dag: (pd.to_datetime("08:00").time(),
+                                             pd.to_datetime("16:00").time())
+                                      for dag in veckodagar} for n in st.session_state.people}
 
 dag_tillgang = st.session_state.dag_tillgang
 work_times = st.session_state.work_times
@@ -139,17 +139,20 @@ with st.expander("👤 Personal", expanded=True):
                 st.session_state.dag_tillgang[ny_person_namn] = {dag: True for dag in veckodagar}
                 st.session_state.work_times[ny_person_namn] = {dag: (pd.to_datetime("08:00").time(),
                                                                     pd.to_datetime("16:00").time())
-                                                                for dag in veckodagar}
+                                                               for dag in veckodagar}
 
     st.markdown("**Nuvarande personal:**")
+
     if "remove_person" not in st.session_state:
         st.session_state.remove_person = None
 
     for n in st.session_state.people:
+        # Rad med inputfält för namn + borttagning
         cols = st.columns([5,1])
         with cols[0]:
             nytt_namn = st.text_input("", value=n, key=f"edit_name_{n}")
             if nytt_namn != n and nytt_namn not in st.session_state.people:
+                # Uppdatera alla referenser
                 st.session_state.people[st.session_state.people.index(n)] = nytt_namn
                 st.session_state.dag_tillgang[nytt_namn] = st.session_state.dag_tillgang.pop(n)
                 st.session_state.work_times[nytt_namn] = st.session_state.work_times.pop(n)
@@ -158,9 +161,10 @@ with st.expander("👤 Personal", expanded=True):
             if st.button("✖", key=f"remove_{n}", help="Ta bort person"):
                 st.session_state.remove_person = n
 
+        # Expander med rubrik "Arbetstider"
         with st.expander("Arbetstider", expanded=False):
             for dag in veckodagar:
-                cols_day = st.columns([0.2,1,0.5,0.5])
+                cols_day = st.columns([0.1, 1, 0.5, 0.5])  # checkbox, dag-namn, start, slut
                 with cols_day[0]:
                     tillgang = st.checkbox("", value=dag_tillgang[n][dag], key=f"available_{n}_{dag}")
                     dag_tillgang[n][dag] = tillgang
@@ -288,7 +292,7 @@ if st.button("Generera schema"):
             summary_html += "</table>"
             st.markdown(summary_html, unsafe_allow_html=True)
 
-    # Totalsummering
+    # --- Totalsummering över alla veckor ---
     if antal_veckor > 1:
         st.markdown("### 📊 Totalsummering över alla veckor")
         total_html = "<table style='border-collapse:collapse;width:60%;'>"
@@ -306,9 +310,19 @@ if st.button("Generera schema"):
         worksheet = workbook.add_worksheet("Schema")
         writer.sheets["Schema"] = worksheet
 
-        header_format = workbook.add_format({"bold": True, "border": 1, "align": "center"})
+        header_format = workbook.add_format({
+            "bold": True,
+            "border": 1,
+            "align": "center"
+        })
+
         format_dict = {
-            person: workbook.add_format({"bg_color": color, "border": 1, "align": "center", "valign": "vcenter"})
+            person: workbook.add_format({
+                "bg_color": color,
+                "border": 1,
+                "align": "center",
+                "valign": "vcenter"
+            })
             for person, color in farger.items()
         }
 
@@ -325,7 +339,12 @@ if st.button("Generera schema"):
                 worksheet.write(row,0,dag)
                 for i in range(pass_per_day):
                     person = passes[f"Pass {i+1}"]
-                    worksheet.write(row, i+1, person, format_dict.get(person))
+                    worksheet.write(
+                        row,
+                        i+1,
+                        person,
+                        format_dict.get(person)
+                    )
                 row += 1
             row += 1
 
