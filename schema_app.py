@@ -114,9 +114,9 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
 # --- PERSONAL ---
 veckodagar = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag"]
 
+# Initiera session_state om inte redan gjort
 if "people" not in st.session_state:
     st.session_state.people = [f"P{i+1}" for i in range(9)]
-
 if "dag_tillgang" not in st.session_state:
     st.session_state.dag_tillgang = {n: {dag: True for dag in veckodagar} for n in st.session_state.people}
 if "start_tid" not in st.session_state:
@@ -128,7 +128,6 @@ dag_tillgang = st.session_state.dag_tillgang
 start_tid = st.session_state.start_tid
 slut_tid = st.session_state.slut_tid
 
-# --- Personal med borttagning alltid synlig ---
 with st.expander("👤 Personal", expanded=True):
     # Lägg till ny person
     col_add = st.columns([3,1])
@@ -148,10 +147,18 @@ with st.expander("👤 Personal", expanded=True):
         st.session_state.remove_person = None
 
     for n in st.session_state.people:
-        # Rad med namn + röd knapp
-        cols = st.columns([6,1])
+        # Rad med inputfält för namn + borttagning
+        cols = st.columns([5,1])
         with cols[0]:
-            st.markdown(f"**{n}**")
+            nytt_namn = st.text_input("", value=n, key=f"edit_name_{n}")
+            # Uppdatera personnamn i session_state
+            if nytt_namn != n and nytt_namn not in st.session_state.people:
+                # Uppdatera alla referenser
+                st.session_state.people[st.session_state.people.index(n)] = nytt_namn
+                st.session_state.dag_tillgang[nytt_namn] = st.session_state.dag_tillgang.pop(n)
+                st.session_state.start_tid[nytt_namn] = st.session_state.start_tid.pop(n)
+                st.session_state.slut_tid[nytt_namn] = st.session_state.slut_tid.pop(n)
+                n = nytt_namn
         with cols[1]:
             if st.button("✖", key=f"remove_{n}", help="Ta bort person"):
                 st.session_state.remove_person = n
@@ -185,7 +192,6 @@ with st.expander("👤 Personal", expanded=True):
             st.session_state.slut_tid.pop(person_to_remove, None)
         st.session_state.remove_person = None
         st.experimental_rerun()
-
 
 # --- COLORS ---
 default_colors = [
