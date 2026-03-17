@@ -63,7 +63,6 @@ div.stButton > button:first-child {
 # --- SCHEDULE SETTINGS ---
 with st.expander("⚙️ Schemainställningar", expanded=True):
 
-    # --- Arbetstid ---
     st.markdown("""<div style='font-weight:bold;margin-bottom:0px;'>Arbetstid</div>""", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
@@ -71,28 +70,19 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
     with col2:
         end_day_time = st.time_input("", value=pd.to_datetime("16:00").time(), step=900)
 
-    # --- Lunch ---
-    st.markdown("<hr style='border:1px solid #e0e0e0;margin-top:8px;margin-bottom:8px;'>", unsafe_allow_html=True)
-
-    lunch_enabled = st.checkbox("Lunchrast - (obemannad tid)")
+    lunch_enabled = st.checkbox("Lunchrast")
     lunch_start = lunch_end = None
     if lunch_enabled:
+        st.markdown("**Lunchtid**")
         col3, col4 = st.columns(2)
         with col3:
             lunch_start = st.time_input("Start", value=pd.to_datetime("12:00").time(), step=900)
         with col4:
-            lunch_end = st.time_input("Slut", value=pd.to_datetime("12:30").time(), step=900)
-    # --- Diskret linje efter lunchtid ---
-    st.markdown("<hr style='border:1px solid #e0e0e0;margin-top:8px;margin-bottom:8px;'>", unsafe_allow_html=True)
+            lunch_end = st.time_input("Slut", value=pd.to_datetime("13:00").time(), step=900)
 
-    # --- Manual passtid direkt under lunch ---
-    
     manual_times = st.checkbox("Justera passens tider manuellt")
-
-    # --- Diskret linje efter passtider ---
     st.markdown("<hr style='border:1px solid #e0e0e0;margin-top:8px;margin-bottom:8px;'>", unsafe_allow_html=True)
 
-    # --- Passinställningar ---
     col5, col6 = st.columns(2)
     with col5:
         pass_per_day = st.number_input("Pass per dag", min_value=1, value=8)
@@ -108,7 +98,6 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
     start_day = pd.to_datetime(start_day_time.strftime("%H:%M"))
     end_day = pd.to_datetime(end_day_time.strftime("%H:%M"))
 
-    # --- Beräkna pass före och efter lunch ---
     segments = []
     if lunch_enabled:
         lunch_start_dt = pd.to_datetime(lunch_start.strftime("%H:%M"))
@@ -118,12 +107,11 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
         pre_pass = max(1, round(pass_per_day * pre_lunch_minutes / (pre_lunch_minutes + post_lunch_minutes)))
         post_pass = pass_per_day - pre_pass
         segments.append((start_day, lunch_start_dt, pre_pass))
-        segments.append((lunch_start_dt, lunch_end_dt, 0))  # lunch
+        segments.append((lunch_start_dt, lunch_end_dt, 0))
         segments.append((lunch_end_dt, end_day, post_pass))
     else:
         segments.append((start_day, end_day, pass_per_day))
 
-    # --- Beräkna initiala pass-tider ---
     pass_times = []
     pass_index = 0
     for seg_start, seg_end, seg_pass in segments:
@@ -139,7 +127,6 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
             current_start = current_end
             pass_index += 1
 
-    # --- Manuell justering ---
     if manual_times:
         st.markdown("### Manuella passtider")
         new_pass_times = []
@@ -151,11 +138,6 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
                 new_end = st.time_input(f"{name} slut", value=e.time(), key=f"manual_end_{i}", step=900)
             new_pass_times.append((name, pd.to_datetime(new_start.strftime("%H:%M")), pd.to_datetime(new_end.strftime("%H:%M"))))
         pass_times = new_pass_times
-
-    # --- Endast klockslag i display ---
-    st.session_state.pass_times_display = [
-        f"{s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}" for name, s, e in pass_times
-    ]
 
 # --- PERSONAL ---
 veckodagar = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag"]
@@ -172,7 +154,7 @@ if "work_times" not in st.session_state:
 dag_tillgang = st.session_state.dag_tillgang
 work_times = st.session_state.work_times
 
-with st.expander("👤 Personal", expanded=False):
+with st.expander("👤 Personal", expanded=True):
     col_add = st.columns([3,1])
     with col_add[0]:
         ny_person_namn = st.text_input("Lägg till person", "")
@@ -184,6 +166,7 @@ with st.expander("👤 Personal", expanded=False):
                 st.session_state.work_times[ny_person_namn] = {dag: (pd.to_datetime("08:00").time(),
                                                                     pd.to_datetime("16:00").time())
                                                                for dag in veckodagar}
+
     st.markdown("**Nuvarande personal:**")
     if "remove_person" not in st.session_state:
         st.session_state.remove_person = None
@@ -216,7 +199,6 @@ with st.expander("👤 Personal", expanded=False):
                     end_time = st.time_input("", value=end_prev, key=f"end_{n}_{dag}", disabled=not tillgang, step=900)
                 if tillgang:
                     work_times[n][dag] = (start_time, end_time)
-
             st.markdown("<div class='day-separator'></div>", unsafe_allow_html=True)
 
     if st.session_state.remove_person:
@@ -276,12 +258,22 @@ def skapa_schema():
 
     return schema
 
-# --- GENERATE SCHEDULE ---
-if st.button("Generera schema"):
-    schema = skapa_schema()
+# --- Generera schema knapp med tidsvisning checkbox ---
+col_gen = st.columns([2,1])
+with col_gen[0]:
+    visa_tider = st.checkbox("Visa tider", value=False)
+with col_gen[1]:
+    generate = st.button("Generera schema")
 
+if generate:
+    schema = skapa_schema()
     total_week_pass_count = {n:0 for n in st.session_state.people}
     total_week_minutes = {n:0 for n in st.session_state.people}
+
+    # --- För display ---
+    pass_times_display = [
+        f"{s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}" if visa_tider else "" for name, s, e in pass_times
+    ]
 
     for vecka, dagar in schema.items():
         st.subheader(vecka)
@@ -291,7 +283,7 @@ if st.button("Generera schema"):
         for dag, passes in dagar.items():
             html = f"<h5>{dag}</h5><table style='border-collapse:collapse;width:100%;table-layout:fixed;'>"
             html += "<tr>"
-            for pt in st.session_state.pass_times_display:
+            for pt in pass_times_display:
                 html += f"<td style='border:1px solid white;background:#28a745;color:black;text-align:center;font-size:12px'>{pt}</td>"
             html += "</tr><tr>"
             for name, start_dt, end_dt in pass_times:
@@ -312,28 +304,7 @@ if st.button("Generera schema"):
             html += "</tr></table>"
             st.markdown(html, unsafe_allow_html=True)
 
-        with st.expander("📊 Veckosummering", expanded=False):
-            summary_html = "<table style='border-collapse:collapse;width:60%;'>"
-            summary_html += "<tr><th>Person</th><th>Pass</th><th>Tid</th></tr>"
-            for n in st.session_state.people:
-                h, m = divmod(week_minutes[n], 60)
-                summary_html += f"<tr><td>{n}</td><td>{week_pass_count[n]}</td><td>{h:02d}:{m:02d}</td></tr>"
-                total_week_pass_count[n] += week_pass_count[n]
-                total_week_minutes[n] += week_minutes[n]
-            summary_html += "</table>"
-            st.markdown(summary_html, unsafe_allow_html=True)
-
-    if antal_veckor > 1:
-        st.markdown("### 📊 Totalsummering över alla veckor")
-        total_html = "<table style='border-collapse:collapse;width:60%;'>"
-        total_html += "<tr><th>Person</th><th>Pass</th><th>Tid</th></tr>"
-        for n in st.session_state.people:
-            h, m = divmod(total_week_minutes[n], 60)
-            total_html += f"<tr><td>{n}</td><td>{total_week_pass_count[n]}</td><td>{h:02d}:{m:02d}</td></tr>"
-        total_html += "</table>"
-        st.markdown(total_html, unsafe_allow_html=True)
-
-    # --- EXCEL EXPORT ---
+    # --- EXCEL Export ---
     output = BytesIO()
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
         workbook = writer.book
@@ -345,7 +316,6 @@ if st.button("Generera schema"):
             "border": 1,
             "align": "center"
         })
-
         format_dict = {
             person: workbook.add_format({
                 "bg_color": color,
@@ -359,9 +329,11 @@ if st.button("Generera schema"):
         worksheet.write(0,0,"Dag",header_format)
         for i, (name, s, e) in enumerate(pass_times):
             if name != "Lunch":
-                worksheet.write(0,i+1,f"{s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}",header_format)
+                header_text = f"{s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}" if visa_tider else ""
+                worksheet.write(0,i+1,header_text,header_format)
             else:
-                worksheet.write(0,i+1,f"Lunch {s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}",header_format)
+                header_text = f"Lunch {s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}" if visa_tider else "Lunch"
+                worksheet.write(0,i+1,header_text,header_format)
             worksheet.set_column(i+1,i+1,18)
 
         row = 1
