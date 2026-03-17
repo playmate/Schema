@@ -114,22 +114,21 @@ veckodagar = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag"]
 if "people" not in st.session_state:
     st.session_state.people = [f"P{i+1}" for i in range(9)]
 
-namn = st.session_state.people
-
 # Initiera dictar
 if "dag_tillgang" not in st.session_state:
-    st.session_state.dag_tillgang = {n: {dag: True for dag in veckodagar} for n in namn}
+    st.session_state.dag_tillgang = {n: {dag: True for dag in veckodagar} for n in st.session_state.people}
 if "start_tid" not in st.session_state:
-    st.session_state.start_tid = {n: pd.to_datetime("08:00").time() for n in namn}
+    st.session_state.start_tid = {n: pd.to_datetime("08:00").time() for n in st.session_state.people}
 if "slut_tid" not in st.session_state:
-    st.session_state.slut_tid = {n: pd.to_datetime("16:00").time() for n in namn}
+    st.session_state.slut_tid = {n: pd.to_datetime("16:00").time() for n in st.session_state.people}
 
 dag_tillgang = st.session_state.dag_tillgang
 start_tid = st.session_state.start_tid
 slut_tid = st.session_state.slut_tid
 
+# --- PERSONAL SECTION MED LISTA + RÖTT KRYSS ---
 with st.expander("👤 Personal", expanded=True):
-    # --- Lägg till ny person ---
+    # Lägg till ny person
     col_add = st.columns([3,1])
     with col_add[0]:
         ny_person_namn = st.text_input("Ny person:", "")
@@ -141,15 +140,26 @@ with st.expander("👤 Personal", expanded=True):
                 start_tid[ny_person_namn] = pd.to_datetime("08:00").time()
                 slut_tid[ny_person_namn] = pd.to_datetime("16:00").time()
 
-    # --- Lista personer med ta-bort-knapp ---
-    remove_person = st.selectbox("Ta bort person:", [""] + st.session_state.people)
-    if remove_person and st.button("✖ Ta bort person"):
-        st.session_state.people.remove(remove_person)
-        dag_tillgang.pop(remove_person, None)
-        start_tid.pop(remove_person, None)
-        slut_tid.pop(remove_person, None)
+    # Lista alla personer med rött kryss
+    st.markdown("**Nuvarande personal:**")
+    remove_indices = []
+    for i, n in enumerate(st.session_state.people):
+        cols = st.columns([6,1])
+        with cols[0]:
+            st.markdown(f"{n}")
+        with cols[1]:
+            if st.button("✖", key=f"remove_{n}", help="Ta bort person"):
+                remove_indices.append(i)
+    # Ta bort markerade personer
+    for idx in sorted(remove_indices, reverse=True):
+        person_to_remove = st.session_state.people[idx]
+        st.session_state.people.pop(idx)
+        dag_tillgang.pop(person_to_remove, None)
+        start_tid.pop(person_to_remove, None)
+        slut_tid.pop(person_to_remove, None)
+        st.experimental_rerun()
 
-    # --- Arbetstider för varje person ---
+    # Arbetstider per person
     for n in st.session_state.people:
         st.markdown(f"### {n}")
         for dag in veckodagar:
@@ -192,7 +202,6 @@ def skapa_schema():
                 p = f"Pass {p_idx+1}"
                 pass_time = st.session_state.pass_times_display[p_idx].split("–")[0]
 
-                # Tillgängliga personer
                 tillgangliga = [
                     n for n in st.session_state.people
                     if daily_count[n] < max_pass_per_person_per_day
@@ -200,11 +209,9 @@ def skapa_schema():
                     and start_tid[n] <= pd.to_datetime(pass_time).time() < slut_tid[n]
                 ]
 
-                # Hindra två pass i rad samma dag
                 if prev_person in tillgangliga and len(tillgangliga) > 1:
                     tillgangliga.remove(prev_person)
 
-                # Hindra samma pass som föregående dag
                 if dag_idx > 0:
                     prev_day_person = prev_day_assignments[veckodagar[dag_idx-1]][p]
                     if prev_day_person in tillgangliga and len(tillgangliga) > 1:
@@ -222,7 +229,6 @@ def skapa_schema():
                 schema[f"Vecka {vecka+1}"][dag][p] = vald
                 prev_person = vald
 
-            # Spara dagens pass för nästa dag
             prev_day_assignments[dag] = schema[f"Vecka {vecka+1}"][dag]
 
     return schema
