@@ -67,9 +67,9 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
     st.markdown("""<div style='font-weight:bold;margin-bottom:0px;'>Arbetstid</div>""", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
-        start_day_time = st.time_input("", value=pd.to_datetime("08:00").time())
+        start_day_time = st.time_input("", value=pd.to_datetime("08:00").time(), step=900)
     with col2:
-        end_day_time = st.time_input("", value=pd.to_datetime("16:00").time())
+        end_day_time = st.time_input("", value=pd.to_datetime("16:00").time(), step=900)
 
     # --- Lunch ---
     lunch_enabled = st.checkbox("Lunchrast")
@@ -78,9 +78,9 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
         st.markdown("**Lunchtid**")
         col3, col4 = st.columns(2)
         with col3:
-            lunch_start = st.time_input("Start", value=pd.to_datetime("12:00").time())
+            lunch_start = st.time_input("Start", value=pd.to_datetime("12:00").time(), step=900)
         with col4:
-            lunch_end = st.time_input("Slut", value=pd.to_datetime("13:00").time())
+            lunch_end = st.time_input("Slut", value=pd.to_datetime("13:00").time(), step=900)
 
     # --- Manual passtid direkt under lunch ---
     manual_times = st.checkbox("Justera passens tider manuellt")
@@ -142,9 +142,9 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
         for i, (name, s, e) in enumerate(pass_times):
             cols = st.columns([1,1])
             with cols[0]:
-                new_start = st.time_input(f"{name} start", value=s.time(), key=f"manual_start_{i}")
+                new_start = st.time_input(f"{name} start", value=s.time(), key=f"manual_start_{i}", step=900)
             with cols[1]:
-                new_end = st.time_input(f"{name} slut", value=e.time(), key=f"manual_end_{i}")
+                new_end = st.time_input(f"{name} slut", value=e.time(), key=f"manual_end_{i}", step=900)
             new_pass_times.append((name, pd.to_datetime(new_start.strftime("%H:%M")), pd.to_datetime(new_end.strftime("%H:%M"))))
         pass_times = new_pass_times
 
@@ -208,9 +208,9 @@ with st.expander("👤 Personal", expanded=True):
                     st.markdown(f"**{dag}**" if tillgang else f"<span class='strike'>{dag}</span>", unsafe_allow_html=True)
                 start_prev, end_prev = work_times[n][dag]
                 with cols_day[2]:
-                    start_time = st.time_input("", value=start_prev, key=f"start_{n}_{dag}", disabled=not tillgang)
+                    start_time = st.time_input("", value=start_prev, key=f"start_{n}_{dag}", disabled=not tillgang, step=900)
                 with cols_day[3]:
-                    end_time = st.time_input("", value=end_prev, key=f"end_{n}_{dag}", disabled=not tillgang)
+                    end_time = st.time_input("", value=end_prev, key=f"end_{n}_{dag}", disabled=not tillgang, step=900)
                 if tillgang:
                     work_times[n][dag] = (start_time, end_time)
 
