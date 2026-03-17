@@ -265,7 +265,8 @@ if generate:
     pass_times_display = [f"{s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}" if visa_tider else "" for name, s, e in pass_times]
 
     for vecka, dagar in schema.items():
-        with st.expander(f"{vecka} - sammanställning", expanded=True):
+        # --- Sammanställning i collapsible ---
+        with st.expander(f"{vecka} - sammanställning", expanded=False):
             st.markdown("<b>Sammanställning av veckan:</b>", unsafe_allow_html=True)
             vecka_summary = {n: 0 for n in st.session_state.people}
             for dag, passes in dagar.items():
@@ -279,22 +280,23 @@ if generate:
             html_summary += "</tr></table>"
             st.markdown(html_summary, unsafe_allow_html=True)
 
-            # Visa schemat
-            for dag, passes in dagar.items():
-                html = f"<h5>{dag}</h5><table style='border-collapse:collapse;width:100%;table-layout:fixed;'>"
-                html += "<tr>"
-                for pt in pass_times_display:
-                    html += f"<td style='border:1px solid white;background:#28a745;color:black;text-align:center;font-size:12px'>{pt}</td>"
-                html += "</tr><tr>"
-                for name, start_dt, end_dt in pass_times:
-                    person = passes[name if name != "Lunch" else "Lunch"]
-                    if name == "Lunch":
-                        html += f"<td class='lunch-cell'>{person}</td>"
-                    else:
-                        color = farger.get(person,"white")
-                        html += f"<td style='border:1px solid white;background:{color};color:black;text-align:center;height:60px;font-weight:bold;'>{person}</td>"
-                html += "</tr></table>"
-                st.markdown(html, unsafe_allow_html=True)
+        # --- Schemat visas alltid öppet ---
+        st.subheader(vecka)
+        for dag, passes in dagar.items():
+            html = f"<h5>{dag}</h5><table style='border-collapse:collapse;width:100%;table-layout:fixed;'>"
+            html += "<tr>"
+            for pt in pass_times_display:
+                html += f"<td style='border:1px solid white;background:#28a745;color:black;text-align:center;font-size:12px'>{pt}</td>"
+            html += "</tr><tr>"
+            for name, start_dt, end_dt in pass_times:
+                person = passes[name if name != "Lunch" else "Lunch"]
+                if name == "Lunch":
+                    html += f"<td class='lunch-cell'>{person}</td>"
+                else:
+                    color = farger.get(person,"white")
+                    html += f"<td style='border:1px solid white;background:{color};color:black;text-align:center;height:60px;font-weight:bold;'>{person}</td>"
+            html += "</tr></table>"
+            st.markdown(html, unsafe_allow_html=True)
 
     # --- EXCEL EXPORT ---
     output = BytesIO()
