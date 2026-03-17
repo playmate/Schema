@@ -114,7 +114,6 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
 # --- PERSONAL ---
 veckodagar = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag"]
 
-# Initiera session_state om inte redan gjort
 if "people" not in st.session_state:
     st.session_state.people = [f"P{i+1}" for i in range(9)]
 if "dag_tillgang" not in st.session_state:
@@ -142,17 +141,14 @@ with st.expander("👤 Personal", expanded=True):
                 st.session_state.slut_tid[ny_person_namn] = pd.to_datetime("16:00").time()
 
     st.markdown("**Nuvarande personal:**")
-
     if "remove_person" not in st.session_state:
         st.session_state.remove_person = None
 
     for n in st.session_state.people:
-        # Rad med inputfält för namn + borttagning
         cols = st.columns([5,1])
         with cols[0]:
             nytt_namn = st.text_input("", value=n, key=f"edit_name_{n}")
             if nytt_namn != n and nytt_namn not in st.session_state.people:
-                # Uppdatera alla referenser
                 st.session_state.people[st.session_state.people.index(n)] = nytt_namn
                 st.session_state.dag_tillgang[nytt_namn] = st.session_state.dag_tillgang.pop(n)
                 st.session_state.start_tid[nytt_namn] = st.session_state.start_tid.pop(n)
@@ -162,7 +158,6 @@ with st.expander("👤 Personal", expanded=True):
             if st.button("✖", key=f"remove_{n}", help="Ta bort person"):
                 st.session_state.remove_person = n
 
-        # Expander med rubrik "Arbetstider"
         with st.expander("Arbetstider", expanded=False):
             for dag in veckodagar:
                 cols_day = st.columns([0.2,0.5,0.5,0.5])
@@ -181,7 +176,6 @@ with st.expander("👤 Personal", expanded=True):
                         st.session_state.slut_tid[n] = st.session_state[f"end_{n}_{dag}"]
             st.markdown("<div class='day-separator'></div>", unsafe_allow_html=True)
 
-    # Ta bort markerad person
     if st.session_state.remove_person:
         person_to_remove = st.session_state.remove_person
         if person_to_remove in st.session_state.people:
@@ -246,10 +240,27 @@ def skapa_schema():
 
     return schema
 
+# --- SAMMANSTÄLLNING INNAN GENERERA ---
+if antal_veckor > 1:
+    total_pass = {n: 0 for n in st.session_state.people}
+    total_minutes = {n: 0 for n in st.session_state.people}
+    for n in st.session_state.people:
+        for dag in veckodagar:
+            if dag_tillgang[n][dag]:
+                total_pass[n] += pass_per_day
+                total_minutes[n] += pass_per_day * pass_langd
+    st.markdown("### 📊 Total arbetsbelastning (för alla veckor)")
+    summary_html = "<table style='border-collapse:collapse;width:50%'>"
+    summary_html += "<tr><th>Person</th><th>Pass</th><th>Tid</th></tr>"
+    for n in st.session_state.people:
+        h, m = divmod(total_minutes[n], 60)
+        summary_html += f"<tr><td>{n}</td><td>{total_pass[n]}</td><td>{h:02d}:{m:02d}</td></tr>"
+    summary_html += "</table>"
+    st.markdown(summary_html, unsafe_allow_html=True)
+
 # --- GENERATE SCHEDULE ---
 if st.button("Generera schema"):
     schema = skapa_schema()
-    cell_width = 100 / pass_per_day
 
     for vecka, dagar in schema.items():
         st.subheader(vecka)
@@ -268,8 +279,12 @@ if st.button("Generera schema"):
                 strike_class = ""
                 if person != "Ingen tillgänglig" and not dag_tillgang.get(person, {}).get(dag, True):
                     strike_class = "strike"
-                # Svart text med vit border
-                html += f"<td style='border:1px solid white;background:{color};color:black;text-align:center;height:60px;font-weight:bold;text-shadow: 1px 1px 0 #ffffff;' class='{strike_class}'>{person}</td>"
+                html += f"<td style='border:1px solid white;background:{color};color:black;text-align:center;height:60px;' class='{strike_class}'>{person}</td>"
+                if person != "Ingen tillgänglig" and strike_class == "":
+                    start = pd.to_datetime(st.session_state.pass_times_display[i].split("–")[0])
+                    end = pd.to_datetime(st.session_state.pass_times_display[i].split("–")[1])
+                    week_pass_count[person] += 1
+                    week_minutes[person] += int((end-start).total_seconds()/60)
             html += "</tr></table>"
             st.markdown(html, unsafe_allow_html=True)
 
