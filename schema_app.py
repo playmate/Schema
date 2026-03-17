@@ -40,12 +40,6 @@ div.stButton > button:first-child {
     border-top: 1px solid #e0e0e0;
     margin: 4px 0;
 }
-.table-cell {
-    color: black;
-    border: 1px solid white;
-    text-align: center;
-    height: 60px;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -139,21 +133,27 @@ with st.expander("👤 Personal", expanded=True):
 
         st.markdown("**Arbetstider per dag:**")
         for dag in veckodagar:
-            cols = st.columns([0.2,0.5,2,2])
+            cols = st.columns([0.2,0.5,0.5,0.5])
             with cols[0]:
                 available = st.checkbox("", value=True, key=f"available_{i}_{dag}")
                 dag_tillgang[name_input][dag] = available
             with cols[1]:
-                strike_class = "strike" if not available else ""
-                st.markdown(f"<span class='{strike_class}'><b>{dag}</b></span>", unsafe_allow_html=True)
+                if available:
+                    st.markdown(f"**{dag}**")
+                else:
+                    st.markdown(f"<span class='strike'>{dag}</span>", unsafe_allow_html=True)
             with cols[2]:
-                start = st.time_input("Arbetstider", value=pd.to_datetime("08:00").time(), key=f"start_{i}_{dag}")
-                start_tid[name_input] = start
+                if available:
+                    start = st.time_input(f"Arbetstider", value=pd.to_datetime("08:00").time(), key=f"start_{i}_{dag}")
+                    start_tid[name_input] = start
+                else:
+                    st.time_input("Arbetstider", value=pd.to_datetime("08:00").time(), key=f"start_{i}_{dag}", disabled=True)
             with cols[3]:
-                end = st.time_input("Arbetstider", value=pd.to_datetime("16:00").time(), key=f"end_{i}_{dag}")
-                slut_tid[name_input] = end
-            if not available:
-                st.markdown(f"<span class='strike'>Arbetstider: {start.strftime('%H:%M')}–{end.strftime('%H:%M')}</span>", unsafe_allow_html=True)
+                if available:
+                    end = st.time_input(f"", value=pd.to_datetime("16:00").time(), key=f"end_{i}_{dag}")
+                    slut_tid[name_input] = end
+                else:
+                    st.time_input("", value=pd.to_datetime("16:00").time(), key=f"end_{i}_{dag}", disabled=True)
             st.markdown("<div class='day-separator'></div>", unsafe_allow_html=True)
 
     for idx in sorted(remove_indices, reverse=True):
@@ -222,7 +222,7 @@ if st.button("Generera schema"):
                 strike_class = ""
                 if person != "Ingen tillgänglig" and not dag_tillgang.get(person, {}).get(dag, True):
                     strike_class = "strike"
-                html += f"<td class='table-cell {strike_class}' style='background:{color}'>{person}</td>"
+                html += f"<td style='border:1px solid white;background:{color};text-align:center;height:60px' class='{strike_class}'>{person}</td>"
 
                 if person != "Ingen tillgänglig" and strike_class == "":
                     start = pd.to_datetime(st.session_state.pass_times_display[i].split("–")[0])
