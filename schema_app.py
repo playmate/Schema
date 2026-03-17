@@ -156,11 +156,15 @@ with st.expander("👤 Personal", expanded=True):
                     st.time_input("", value=pd.to_datetime("16:00").time(), key=f"end_{i}_{dag}", disabled=True)
             st.markdown("<div class='day-separator'></div>", unsafe_allow_html=True)
 
-    # Ta bort markerade personer
+    # --- Ta bort markerade personer (fix för IndexError) ---
     for idx in sorted(remove_indices, reverse=True):
-        st.session_state.people.pop(idx)
-        namn.pop(idx)
-        dag_tillgang.pop(namn[idx], None)
+        person_to_remove = st.session_state.people[idx]
+        st.session_state.people.pop(idx)        # ta bort från session_state
+        if person_to_remove in namn:
+            namn.remove(person_to_remove)       # ta bort från namn-listan
+        dag_tillgang.pop(person_to_remove, None)
+        start_tid.pop(person_to_remove, None)
+        slut_tid.pop(person_to_remove, None)
 
     # --- Lägg till person-knapp ---
     if st.button("➕ Lägg till person"):
