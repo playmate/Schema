@@ -6,7 +6,7 @@ from io import BytesIO
 st.set_page_config(page_title="Schemagenerator", layout="wide")
 st.title("📅 Generera schema")
 
-# --- BUTTON CSS STYLING ---
+# --- CSS Styling ---
 st.markdown("""
 <style>
 div.stButton > button:first-child {
@@ -48,16 +48,31 @@ div.stButton > button:first-child {
 
 # --- SCHEDULE SETTINGS ---
 with st.expander("⚙️ Schemainställningar", expanded=True):
+
+    # Arbetstid rad
+    st.markdown("**Arbetstid**")
     col1, col2 = st.columns(2)
     with col1:
-        start_day_time = st.time_input("Starttid", value=pd.to_datetime("08:00").time())
+        start_day_time = st.time_input("", value=pd.to_datetime("08:00").time())
     with col2:
-        end_day_time = st.time_input("Sluttid", value=pd.to_datetime("16:00").time())
+        end_day_time = st.time_input("", value=pd.to_datetime("16:00").time())
 
-    col3, col4 = st.columns(2)
-    with col3:
+    # Lunchrast
+    lunch_enabled = st.checkbox("Lunchrast")
+    lunch_start = lunch_end = None
+    if lunch_enabled:
+        st.markdown("**Lunchtid**")
+        col3, col4 = st.columns(2)
+        with col3:
+            lunch_start = st.time_input("Start", value=pd.to_datetime("12:00").time())
+        with col4:
+            lunch_end = st.time_input("Slut", value=pd.to_datetime("13:00").time())
+
+    # Passinställningar
+    col5, col6 = st.columns(2)
+    with col5:
         pass_per_day = st.number_input("Pass per dag", min_value=1, value=8)
-    with col4:
+    with col6:
         max_pass_per_person_per_day = st.number_input(
             "Max antal pass per person per dag",
             min_value=1,
@@ -69,20 +84,26 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
     start_day = pd.to_datetime(start_day_time.strftime("%H:%M"))
     end_day = pd.to_datetime(end_day_time.strftime("%H:%M"))
 
-    total_minutes = int((end_day - start_day).total_seconds() / 60)
+    # Exkludera lunch om aktiv
+    if lunch_enabled:
+        lunch_start_dt = pd.to_datetime(lunch_start.strftime("%H:%M"))
+        lunch_end_dt = pd.to_datetime(lunch_end.strftime("%H:%M"))
+        total_minutes = int((lunch_start_dt - start_day).total_seconds() / 60) + int((end_day - lunch_end_dt).total_seconds() / 60)
+    else:
+        total_minutes = int((end_day - start_day).total_seconds() / 60)
+
     pass_langd = total_minutes // pass_per_day
     st.text(f"Passlängd: {pass_langd} min")
 
+    # Manuella pass
     manual_times = st.checkbox("Justera passens tider manuellt")
     pass_times = []
     prev_end = start_day
 
     if manual_times:
         st.markdown("**Justera passens tider manuellt:**")
-        
-        # Input för varje pass med passnamn + start/slut
         for i in range(pass_per_day):
-            cols = st.columns([0.2, 0.4, 0.4])  # Passnamn, start, slut
+            cols = st.columns([0.2, 0.4, 0.4])
             with cols[0]:
                 st.markdown(f"**Pass {i+1}**")
             with cols[1]:
@@ -93,19 +114,14 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
                 end_input = st.time_input(
                     "", value=(prev_end + pd.Timedelta(minutes=pass_langd)).time(), key=f"end_pass_{i}"
                 )
-
             start_dt = pd.to_datetime(start_input.strftime("%H:%M"))
             end_dt = pd.to_datetime(end_input.strftime("%H:%M"))
-
-            # Säkerställ ordning
             if start_dt < prev_end:
                 start_dt = prev_end
             if end_dt <= start_dt:
                 end_dt = start_dt + pd.Timedelta(minutes=pass_langd)
-
             prev_end = end_dt
             pass_times.append((start_dt, end_dt))
-
     else:
         for i in range(pass_per_day):
             start_dt = start_day + pd.Timedelta(minutes=i * pass_langd)
@@ -120,7 +136,6 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
 # --- PERSONAL ---
 veckodagar = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag"]
 
-# Initiera session_state om inte redan gjort
 if "people" not in st.session_state:
     st.session_state.people = [f"P{i+1}" for i in range(9)]
 if "dag_tillgang" not in st.session_state:
@@ -134,7 +149,6 @@ dag_tillgang = st.session_state.dag_tillgang
 work_times = st.session_state.work_times
 
 with st.expander("👤 Personal", expanded=True):
-    # Lägg till ny person
     col_add = st.columns([3,1])
     with col_add[0]:
         ny_person_namn = st.text_input("Lägg till person", "")
@@ -146,14 +160,12 @@ with st.expander("👤 Personal", expanded=True):
                 st.session_state.work_times[ny_person_namn] = {dag: (pd.to_datetime("08:00").time(),
                                                                     pd.to_datetime("16:00").time())
                                                                for dag in veckodagar}
-
     st.markdown("**Nuvarande personal:**")
 
     if "remove_person" not in st.session_state:
         st.session_state.remove_person = None
 
     for n in st.session_state.people:
-        # Rad med inputfält för namn + borttagning
         cols = st.columns([5,1])
         with cols[0]:
             nytt_namn = st.text_input("", value=n, key=f"edit_name_{n}")
@@ -166,10 +178,9 @@ with st.expander("👤 Personal", expanded=True):
             if st.button("✖", key=f"remove_{n}", help="Ta bort person"):
                 st.session_state.remove_person = n
 
-        # Expander med rubrik "Arbetstider"
         with st.expander("Arbetstider", expanded=False):
             for dag in veckodagar:
-                cols_day = st.columns([0.1, 1, 0.5, 0.5])  # checkbox, dag-namn, start, slut
+                cols_day = st.columns([0.1, 1, 0.5, 0.5])
                 with cols_day[0]:
                     tillgang = st.checkbox("", value=dag_tillgang[n][dag], key=f"available_{n}_{dag}")
                     dag_tillgang[n][dag] = tillgang
@@ -185,7 +196,6 @@ with st.expander("👤 Personal", expanded=True):
 
             st.markdown("<div class='day-separator'></div>", unsafe_allow_html=True)
 
-    # Ta bort markerad person
     if st.session_state.remove_person:
         person_to_remove = st.session_state.remove_person
         if person_to_remove in st.session_state.people:
@@ -285,7 +295,6 @@ if st.button("Generera schema"):
             html += "</tr></table>"
             st.markdown(html, unsafe_allow_html=True)
 
-        # Summering per vecka
         with st.expander("📊 Veckosummering", expanded=False):
             summary_html = "<table style='border-collapse:collapse;width:60%;'>"
             summary_html += "<tr><th>Person</th><th>Pass</th><th>Tid</th></tr>"
@@ -297,7 +306,6 @@ if st.button("Generera schema"):
             summary_html += "</table>"
             st.markdown(summary_html, unsafe_allow_html=True)
 
-    # --- Totalsummering över alla veckor ---
     if antal_veckor > 1:
         st.markdown("### 📊 Totalsummering över alla veckor")
         total_html = "<table style='border-collapse:collapse;width:60%;'>"
