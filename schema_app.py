@@ -108,7 +108,6 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
         lunch_end_dt = pd.to_datetime(lunch_end.strftime("%H:%M"))
         pre_lunch_minutes = int((lunch_start_dt - start_day).total_seconds() / 60)
         post_lunch_minutes = int((end_day - lunch_end_dt).total_seconds() / 60)
-        # Fördela pass proportionellt
         pre_pass = max(1, round(pass_per_day * pre_lunch_minutes / (pre_lunch_minutes + post_lunch_minutes)))
         post_pass = pass_per_day - pre_pass
         segments.append((start_day, lunch_start_dt, pre_pass))
@@ -133,9 +132,9 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
             current_start = current_end
             pass_index += 1
 
+    # --- Endast klockslag i display ---
     st.session_state.pass_times_display = [
-        f"{name} {s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}" if name != "Lunch" else f"Lunch {s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}"
-        for name, s, e in pass_times
+        f"{s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}" for _, s, e in pass_times
     ]
 
 # --- PERSONAL ---
@@ -223,7 +222,6 @@ farger["Lunch"] = "#E0E0E0"
 def skapa_schema():
     schema = {f"Vecka {v+1}": {dag:{} for dag in veckodagar} for v in range(antal_veckor)}
     pass_raknare = {n:0 for n in st.session_state.people}
-    prev_day_assignments = {dag: {} for dag in veckodagar}
 
     for vecka in range(antal_veckor):
         for dag in veckodagar:
@@ -342,7 +340,10 @@ if st.button("Generera schema"):
 
         worksheet.write(0,0,"Dag",header_format)
         for i, (name, s, e) in enumerate(pass_times):
-            worksheet.write(0,i+1,f"{name} {s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}",header_format)
+            if name != "Lunch":
+                worksheet.write(0,i+1,f"{s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}",header_format)
+            else:
+                worksheet.write(0,i+1,f"Lunch {s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}",header_format)
             worksheet.set_column(i+1,i+1,18)
 
         row = 1
