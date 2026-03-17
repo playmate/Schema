@@ -111,15 +111,15 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
 # --- PERSONAL ---
 veckodagar = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag"]
 
+if "people" not in st.session_state:
+    st.session_state.people = [f"P{i+1}" for i in range(9)]
+namn = st.session_state.people
+
+start_tid = {}
+slut_tid = {}
+dag_tillgang = {n: {dag: True for dag in veckodagar} for n in namn}
+
 with st.expander("👤 Personal", expanded=True):
-    if "people" not in st.session_state:
-        st.session_state.people = [f"P{i+1}" for i in range(9)]
-    namn = st.session_state.people
-
-    start_tid = {}
-    slut_tid = {}
-    dag_tillgang = {n: {dag: True for dag in veckodagar} for n in namn}
-
     remove_indices = []
     for i, n in enumerate(namn):
         st.markdown("<div class='separator'></div>", unsafe_allow_html=True)
@@ -144,22 +144,32 @@ with st.expander("👤 Personal", expanded=True):
                     st.markdown(f"<span class='strike'>{dag}</span>", unsafe_allow_html=True)
             with cols[2]:
                 if available:
-                    start = st.time_input(f"Arbetstider", value=pd.to_datetime("08:00").time(), key=f"start_{i}_{dag}")
+                    start = st.time_input("Arbetstider", value=pd.to_datetime("08:00").time(), key=f"start_{i}_{dag}")
                     start_tid[name_input] = start
                 else:
                     st.time_input("Arbetstider", value=pd.to_datetime("08:00").time(), key=f"start_{i}_{dag}", disabled=True)
             with cols[3]:
                 if available:
-                    end = st.time_input(f"", value=pd.to_datetime("16:00").time(), key=f"end_{i}_{dag}")
+                    end = st.time_input("", value=pd.to_datetime("16:00").time(), key=f"end_{i}_{dag}")
                     slut_tid[name_input] = end
                 else:
                     st.time_input("", value=pd.to_datetime("16:00").time(), key=f"end_{i}_{dag}", disabled=True)
             st.markdown("<div class='day-separator'></div>", unsafe_allow_html=True)
 
+    # Ta bort markerade personer
     for idx in sorted(remove_indices, reverse=True):
         st.session_state.people.pop(idx)
         namn.pop(idx)
         dag_tillgang.pop(namn[idx], None)
+
+    # --- Lägg till person-knapp ---
+    if st.button("➕ Lägg till person"):
+        ny_person = f"P{len(namn)+1}"
+        st.session_state.people.append(ny_person)
+        namn.append(ny_person)
+        start_tid[ny_person] = pd.to_datetime("08:00").time()
+        slut_tid[ny_person] = pd.to_datetime("16:00").time()
+        dag_tillgang[ny_person] = {dag: True for dag in veckodagar}
 
 # --- COLORS ---
 default_colors = [
@@ -177,16 +187,23 @@ def skapa_schema():
     for vecka in range(antal_veckor):
         for dag in veckodagar:
             daily_count = {n:0 for n in namn}
+            prev_person = None  # hindra två pass i rad
+
             for p_idx in range(pass_per_day):
                 p = f"Pass {p_idx+1}"
                 pass_time = st.session_state.pass_times_display[p_idx].split("–")[0]
 
+                # Tillgängliga personer
                 tillgangliga = [
                     n for n in namn
                     if daily_count[n] < max_pass_per_person_per_day
                     and dag_tillgang[n].get(dag, True)
                     and start_tid[n] <= pd.to_datetime(pass_time).time() < slut_tid[n]
                 ]
+
+                # Undvik två pass i rad
+                if prev_person in tillgangliga and len(tillgangliga) > 1:
+                    tillgangliga.remove(prev_person)
 
                 if tillgangliga:
                     min_pass = min(pass_raknare[n] for n in tillgangliga)
@@ -198,6 +215,7 @@ def skapa_schema():
                     vald = "Ingen tillgänglig"
 
                 schema[f"Vecka {vecka+1}"][dag][p] = vald
+                prev_person = vald
     return schema
 
 # --- GENERATE SCHEDULE ---
