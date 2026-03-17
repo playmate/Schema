@@ -49,7 +49,6 @@ div.stButton > button:first-child {
 # --- SCHEDULE SETTINGS ---
 with st.expander("⚙️ Schemainställningar", expanded=True):
 
-    # Arbetstid rad
     st.markdown("**Arbetstid**")
     col1, col2 = st.columns(2)
     with col1:
@@ -57,7 +56,7 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
     with col2:
         end_day_time = st.time_input("", value=pd.to_datetime("16:00").time())
 
-    # Lunchrast
+    # Lunch
     lunch_enabled = st.checkbox("Lunchrast")
     lunch_start = lunch_end = None
     if lunch_enabled:
@@ -84,53 +83,41 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
     start_day = pd.to_datetime(start_day_time.strftime("%H:%M"))
     end_day = pd.to_datetime(end_day_time.strftime("%H:%M"))
 
-    # Exkludera lunch om aktiv
+    # --- Beräkna pass före och efter lunch ---
+    segments = []
     if lunch_enabled:
         lunch_start_dt = pd.to_datetime(lunch_start.strftime("%H:%M"))
         lunch_end_dt = pd.to_datetime(lunch_end.strftime("%H:%M"))
-        total_minutes = int((lunch_start_dt - start_day).total_seconds() / 60) + int((end_day - lunch_end_dt).total_seconds() / 60)
+        pre_lunch_minutes = int((lunch_start_dt - start_day).total_seconds() / 60)
+        post_lunch_minutes = int((end_day - lunch_end_dt).total_seconds() / 60)
+        # Fördela pass proportionellt
+        pre_pass = max(1, round(pass_per_day * pre_lunch_minutes / (pre_lunch_minutes + post_lunch_minutes)))
+        post_pass = pass_per_day - pre_pass
+        segments.append((start_day, lunch_start_dt, pre_pass))
+        segments.append((lunch_start_dt, lunch_end_dt, 0))  # lunch
+        segments.append((lunch_end_dt, end_day, post_pass))
     else:
-        total_minutes = int((end_day - start_day).total_seconds() / 60)
+        segments.append((start_day, end_day, pass_per_day))
 
-    pass_langd = total_minutes // pass_per_day
-    st.text(f"Passlängd: {pass_langd} min")
-
-    # Manuella pass
-    manual_times = st.checkbox("Justera passens tider manuellt")
+    # Beräkna pass-tider
     pass_times = []
-    prev_end = start_day
-
-    if manual_times:
-        st.markdown("**Justera passens tider manuellt:**")
-        for i in range(pass_per_day):
-            cols = st.columns([0.2, 0.4, 0.4])
-            with cols[0]:
-                st.markdown(f"**Pass {i+1}**")
-            with cols[1]:
-                start_input = st.time_input(
-                    "", value=prev_end.time(), key=f"start_pass_{i}"
-                )
-            with cols[2]:
-                end_input = st.time_input(
-                    "", value=(prev_end + pd.Timedelta(minutes=pass_langd)).time(), key=f"end_pass_{i}"
-                )
-            start_dt = pd.to_datetime(start_input.strftime("%H:%M"))
-            end_dt = pd.to_datetime(end_input.strftime("%H:%M"))
-            if start_dt < prev_end:
-                start_dt = prev_end
-            if end_dt <= start_dt:
-                end_dt = start_dt + pd.Timedelta(minutes=pass_langd)
-            prev_end = end_dt
-            pass_times.append((start_dt, end_dt))
-    else:
-        for i in range(pass_per_day):
-            start_dt = start_day + pd.Timedelta(minutes=i * pass_langd)
-            end_dt = start_day + pd.Timedelta(minutes=(i + 1) * pass_langd)
-            pass_times.append((start_dt, end_dt))
+    pass_index = 0
+    for seg_start, seg_end, seg_pass in segments:
+        if seg_pass == 0:
+            pass_times.append(("Lunch", seg_start, seg_end))
+            continue
+        total_minutes = int((seg_end - seg_start).total_seconds() / 60)
+        pass_length = total_minutes // seg_pass
+        current_start = seg_start
+        for i in range(seg_pass):
+            current_end = current_start + pd.Timedelta(minutes=pass_length)
+            pass_times.append((f"Pass {pass_index+1}", current_start, current_end))
+            current_start = current_end
+            pass_index += 1
 
     st.session_state.pass_times_display = [
-        f"{s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}"
-        for s, e in pass_times
+        f"{name} {s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}" if name != "Lunch" else f"Lunch {s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}"
+        for name, s, e in pass_times
     ]
 
 # --- PERSONAL ---
@@ -212,36 +199,33 @@ default_colors = [
 ]
 farger = {n: default_colors[i % len(default_colors)] for i, n in enumerate(st.session_state.people)}
 farger["Ingen tillgänglig"] = "#E0E0E0"
+farger["Lunch"] = "#FFD966"
 
 # --- SCHEMA GENERATOR ---
 def skapa_schema():
     schema = {f"Vecka {v+1}": {dag:{} for dag in veckodagar} for v in range(antal_veckor)}
     pass_raknare = {n:0 for n in st.session_state.people}
-    prev_day_assignments = {dag: {f"Pass {i+1}": None for i in range(pass_per_day)} for dag in veckodagar}
+    prev_day_assignments = {dag: {} for dag in veckodagar}
 
     for vecka in range(antal_veckor):
-        for dag_idx, dag in enumerate(veckodagar):
+        for dag in veckodagar:
             daily_count = {n:0 for n in st.session_state.people}
             prev_person = None
 
-            for p_idx in range(pass_per_day):
-                p = f"Pass {p_idx+1}"
-                pass_time = st.session_state.pass_times_display[p_idx].split("–")[0]
+            for name, start_dt, end_dt in pass_times:
+                if name == "Lunch":
+                    schema[f"Vecka {vecka+1}"][dag][name] = "Lunch"
+                    continue
 
                 tillgangliga = [
                     n for n in st.session_state.people
                     if daily_count[n] < max_pass_per_person_per_day
                     and dag_tillgang[n].get(dag, True)
-                    and work_times[n][dag][0] <= pd.to_datetime(pass_time).time() < work_times[n][dag][1]
+                    and work_times[n][dag][0] <= start_dt.time() < work_times[n][dag][1]
                 ]
 
                 if prev_person in tillgangliga and len(tillgangliga) > 1:
                     tillgangliga.remove(prev_person)
-
-                if dag_idx > 0:
-                    prev_day_person = prev_day_assignments[veckodagar[dag_idx-1]][p]
-                    if prev_day_person in tillgangliga and len(tillgangliga) > 1:
-                        tillgangliga.remove(prev_day_person)
 
                 if tillgangliga:
                     min_pass = min(pass_raknare[n] for n in tillgangliga)
@@ -252,17 +236,14 @@ def skapa_schema():
                 else:
                     vald = "Ingen tillgänglig"
 
-                schema[f"Vecka {vecka+1}"][dag][p] = vald
+                schema[f"Vecka {vecka+1}"][dag][name] = vald
                 prev_person = vald
-
-            prev_day_assignments[dag] = schema[f"Vecka {vecka+1}"][dag]
 
     return schema
 
 # --- GENERATE SCHEDULE ---
 if st.button("Generera schema"):
     schema = skapa_schema()
-    cell_width = 100 / pass_per_day
 
     total_week_pass_count = {n:0 for n in st.session_state.people}
     total_week_minutes = {n:0 for n in st.session_state.people}
@@ -278,23 +259,22 @@ if st.button("Generera schema"):
             for pt in st.session_state.pass_times_display:
                 html += f"<td style='border:1px solid white;background:#28a745;color:black;text-align:center;font-size:12px'>{pt}</td>"
             html += "</tr><tr>"
-            for i in range(pass_per_day):
-                person = passes[f"Pass {i+1}"]
+            for name, start_dt, end_dt in pass_times:
+                person = passes[name if name != "Lunch" else "Lunch"]
                 color = farger.get(person,"white")
                 strike_class = ""
-                if person != "Ingen tillgänglig" and not dag_tillgang.get(person, {}).get(dag, True):
+                if person != "Ingen tillgänglig" and person != "Lunch" and not dag_tillgang.get(person, {}).get(dag, True):
                     strike_class = "strike"
                 html += f"<td style='border:1px solid white;background:{color};color:black;text-align:center;height:60px;font-weight:bold;' class='{strike_class}'>{person}</td>"
 
-                if person != "Ingen tillgänglig" and strike_class == "":
-                    start = pd.to_datetime(st.session_state.pass_times_display[i].split("–")[0])
-                    end = pd.to_datetime(st.session_state.pass_times_display[i].split("–")[1])
+                if person != "Ingen tillgänglig" and person != "Lunch" and strike_class == "":
                     week_pass_count[person] += 1
-                    week_minutes[person] += int((end-start).total_seconds()/60)
+                    week_minutes[person] += int((end_dt - start_dt).total_seconds()/60)
 
             html += "</tr></table>"
             st.markdown(html, unsafe_allow_html=True)
 
+        # Veckosummering
         with st.expander("📊 Veckosummering", expanded=False):
             summary_html = "<table style='border-collapse:collapse;width:60%;'>"
             summary_html += "<tr><th>Person</th><th>Pass</th><th>Tid</th></tr>"
@@ -340,8 +320,8 @@ if st.button("Generera schema"):
         }
 
         worksheet.write(0,0,"Dag",header_format)
-        for i in range(pass_per_day):
-            worksheet.write(0,i+1,st.session_state.pass_times_display[i],header_format)
+        for i, (name, s, e) in enumerate(pass_times):
+            worksheet.write(0,i+1,f"{name} {s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}",header_format)
             worksheet.set_column(i+1,i+1,18)
 
         row = 1
@@ -350,14 +330,9 @@ if st.button("Generera schema"):
             row += 1
             for dag, passes in dagar.items():
                 worksheet.write(row,0,dag)
-                for i in range(pass_per_day):
-                    person = passes[f"Pass {i+1}"]
-                    worksheet.write(
-                        row,
-                        i+1,
-                        person,
-                        format_dict.get(person)
-                    )
+                for i, (name, s, e) in enumerate(pass_times):
+                    person = passes[name if name != "Lunch" else "Lunch"]
+                    worksheet.write(row,i+1,person,format_dict.get(person))
                 row += 1
             row += 1
 
