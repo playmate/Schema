@@ -72,7 +72,7 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
         end_day_time = st.time_input("", value=pd.to_datetime("16:00").time(), step=900)
 
     # --- Lunch ---
-    lunch_enabled = st.checkbox("Lunchrast")
+    lunch_enabled = st.checkbox("Lunchrast - (obemannad tid)")
     lunch_start = lunch_end = None
     if lunch_enabled:
         st.markdown("**Lunchtid**")
