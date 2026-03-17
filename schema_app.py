@@ -40,6 +40,12 @@ div.stButton > button:first-child {
     border-top: 1px solid #e0e0e0;
     margin: 4px 0;
 }
+.table-cell {
+    color: black;
+    border: 1px solid white;
+    text-align: center;
+    height: 60px;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -116,7 +122,6 @@ with st.expander("👤 Personal", expanded=True):
         st.session_state.people = [f"P{i+1}" for i in range(9)]
     namn = st.session_state.people
 
-    # Initialize dictionaries
     start_tid = {}
     slut_tid = {}
     dag_tillgang = {n: {dag: True for dag in veckodagar} for n in namn}
@@ -139,16 +144,18 @@ with st.expander("👤 Personal", expanded=True):
                 available = st.checkbox("", value=True, key=f"available_{i}_{dag}")
                 dag_tillgang[name_input][dag] = available
             with cols[1]:
-                st.markdown(f"**{dag}**")  # Dagens namn efter checkbox
+                strike_class = "strike" if not available else ""
+                st.markdown(f"<span class='{strike_class}'><b>{dag}</b></span>", unsafe_allow_html=True)
             with cols[2]:
-                start = st.time_input(f"{dag} börjar", value=pd.to_datetime("08:00").time(), key=f"start_{i}_{dag}")
+                start = st.time_input("Arbetstider", value=pd.to_datetime("08:00").time(), key=f"start_{i}_{dag}")
                 start_tid[name_input] = start
             with cols[3]:
-                end = st.time_input(f"{dag} slutar", value=pd.to_datetime("16:00").time(), key=f"end_{i}_{dag}")
+                end = st.time_input("Arbetstider", value=pd.to_datetime("16:00").time(), key=f"end_{i}_{dag}")
                 slut_tid[name_input] = end
+            if not available:
+                st.markdown(f"<span class='strike'>Arbetstider: {start.strftime('%H:%M')}–{end.strftime('%H:%M')}</span>", unsafe_allow_html=True)
             st.markdown("<div class='day-separator'></div>", unsafe_allow_html=True)
 
-    # Ta bort markerade personer
     for idx in sorted(remove_indices, reverse=True):
         st.session_state.people.pop(idx)
         namn.pop(idx)
@@ -207,7 +214,7 @@ if st.button("Generera schema"):
             html = f"<h5>{dag}</h5><table style='border-collapse:collapse;width:100%;table-layout:fixed;'>"
             html += "<tr>"
             for pt in st.session_state.pass_times_display:
-                html += f"<td style='border:1px solid black;background:#28a745;color:white;text-align:center;font-size:12px'>{pt}</td>"
+                html += f"<td style='border:1px solid white;background:#28a745;color:black;text-align:center;font-size:12px'>{pt}</td>"
             html += "</tr><tr>"
             for i in range(pass_per_day):
                 person = passes[f"Pass {i+1}"]
@@ -215,7 +222,7 @@ if st.button("Generera schema"):
                 strike_class = ""
                 if person != "Ingen tillgänglig" and not dag_tillgang.get(person, {}).get(dag, True):
                     strike_class = "strike"
-                html += f"<td style='border:1px solid black;background:{color};text-align:center;height:60px' class='{strike_class}'>{person}</td>"
+                html += f"<td class='table-cell {strike_class}' style='background:{color}'>{person}</td>"
 
                 if person != "Ingen tillgänglig" and strike_class == "":
                     start = pd.to_datetime(st.session_state.pass_times_display[i].split("–")[0])
@@ -226,14 +233,14 @@ if st.button("Generera schema"):
             html += "</tr></table>"
             st.markdown(html, unsafe_allow_html=True)
 
-        st.markdown("### 📊 Veckosummering")
-        summary_html = "<table style='border-collapse:collapse;width:60%;'>"
-        summary_html += "<tr><th>Person</th><th>Pass</th><th>Tid</th></tr>"
-        for n in namn:
-            h, m = divmod(week_minutes[n], 60)
-            summary_html += f"<tr><td>{n}</td><td>{week_pass_count[n]}</td><td>{h:02d}:{m:02d}</td></tr>"
-        summary_html += "</table>"
-        st.markdown(summary_html, unsafe_allow_html=True)
+        with st.expander("📊 Veckosummering", expanded=False):
+            summary_html = "<table style='border-collapse:collapse;width:60%;'>"
+            summary_html += "<tr><th>Person</th><th>Pass</th><th>Tid</th></tr>"
+            for n in namn:
+                h, m = divmod(week_minutes[n], 60)
+                summary_html += f"<tr><td>{n}</td><td>{week_pass_count[n]}</td><td>{h:02d}:{m:02d}</td></tr>"
+            summary_html += "</table>"
+            st.markdown(summary_html, unsafe_allow_html=True)
 
     # --- EXCEL EXPORT ---
     output = BytesIO()
