@@ -62,14 +62,18 @@ div.stButton > button:first-child {
 
 # --- SCHEDULE SETTINGS ---
 with st.expander("⚙️ Schemainställningar", expanded=True):
-
-    st.markdown("""<div style='font-weight:bold;margin-bottom:0px;'>Arbetstid</div>""", unsafe_allow_html=True)
+    # --- Arbetstid ---
+    st.markdown("<div style='font-weight:bold;margin-bottom:0px;'>Arbetstid</div>", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
         start_day_time = st.time_input("", value=pd.to_datetime("08:00").time(), step=900)
     with col2:
         end_day_time = st.time_input("", value=pd.to_datetime("16:00").time(), step=900)
 
+    # --- Diskret linje ovanför lunch ---
+    st.markdown("<hr style='border:1px solid #e0e0e0;margin-top:8px;margin-bottom:4px;'>", unsafe_allow_html=True)
+
+    # --- Lunch ---
     lunch_enabled = st.checkbox("Lunchrast")
     lunch_start = lunch_end = None
     if lunch_enabled:
@@ -80,9 +84,13 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
         with col4:
             lunch_end = st.time_input("Slut", value=pd.to_datetime("13:00").time(), step=900)
 
-    manual_times = st.checkbox("Justera passens tider manuellt")
-    st.markdown("<hr style='border:1px solid #e0e0e0;margin-top:8px;margin-bottom:8px;'>", unsafe_allow_html=True)
+    # --- Diskret linje under lunch ---
+    st.markdown("<hr style='border:1px solid #e0e0e0;margin-top:4px;margin-bottom:8px;'>", unsafe_allow_html=True)
 
+    # --- Manual passtid direkt under lunch ---
+    manual_times = st.checkbox("Justera passens tider manuellt")
+
+    # --- Passinställningar ---
     col5, col6 = st.columns(2)
     with col5:
         pass_per_day = st.number_input("Pass per dag", min_value=1, value=8)
@@ -141,7 +149,6 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
 
 # --- PERSONAL ---
 veckodagar = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag"]
-
 if "people" not in st.session_state:
     st.session_state.people = [f"P{i+1}" for i in range(9)]
 if "dag_tillgang" not in st.session_state:
@@ -150,7 +157,6 @@ if "work_times" not in st.session_state:
     st.session_state.work_times = {n: {dag: (pd.to_datetime("08:00").time(),
                                              pd.to_datetime("16:00").time())
                                       for dag in veckodagar} for n in st.session_state.people}
-
 dag_tillgang = st.session_state.dag_tillgang
 work_times = st.session_state.work_times
 
@@ -211,10 +217,7 @@ with st.expander("👤 Personal", expanded=True):
         st.experimental_rerun()
 
 # --- COLORS ---
-default_colors = [
-    "#FF9999","#99CCFF","#FFCC99","#99FF99","#FFCCFF",
-    "#CCCCFF","#FFFF99","#FF9966","#66CC99"
-]
+default_colors = ["#FF9999","#99CCFF","#FFCC99","#99FF99","#FFCCFF","#CCCCFF","#FFFF99","#FF9966","#66CC99"]
 farger = {n: default_colors[i % len(default_colors)] for i, n in enumerate(st.session_state.people)}
 farger["Ingen tillgänglig"] = "#E0E0E0"
 farger["Lunch"] = "#E0E0E0"
@@ -223,27 +226,20 @@ farger["Lunch"] = "#E0E0E0"
 def skapa_schema():
     schema = {f"Vecka {v+1}": {dag:{} for dag in veckodagar} for v in range(antal_veckor)}
     pass_raknare = {n:0 for n in st.session_state.people}
-
     for vecka in range(antal_veckor):
         for dag in veckodagar:
             daily_count = {n:0 for n in st.session_state.people}
             prev_person = None
-
             for name, start_dt, end_dt in pass_times:
                 if name == "Lunch":
                     schema[f"Vecka {vecka+1}"][dag][name] = "Lunch"
                     continue
-
-                tillgangliga = [
-                    n for n in st.session_state.people
-                    if daily_count[n] < max_pass_per_person_per_day
-                    and dag_tillgang[n].get(dag, True)
-                    and work_times[n][dag][0] <= start_dt.time() < work_times[n][dag][1]
-                ]
-
+                tillgangliga = [n for n in st.session_state.people
+                                if daily_count[n] < max_pass_per_person_per_day
+                                and dag_tillgang[n].get(dag, True)
+                                and work_times[n][dag][0] <= start_dt.time() < work_times[n][dag][1]]
                 if prev_person in tillgangliga and len(tillgangliga) > 1:
                     tillgangliga.remove(prev_person)
-
                 if tillgangliga:
                     min_pass = min(pass_raknare[n] for n in tillgangliga)
                     candidates = [n for n in tillgangliga if pass_raknare[n] == min_pass]
@@ -252,34 +248,24 @@ def skapa_schema():
                     pass_raknare[vald] += 1
                 else:
                     vald = "Ingen tillgänglig"
-
                 schema[f"Vecka {vecka+1}"][dag][name] = vald
                 prev_person = vald
-
     return schema
 
-# --- Generera schema knapp med tidsvisning checkbox ---
-col_gen = st.columns([2,1])
+# --- GENERERA SCHEMA KNAPP OCH VISA TIDER CHECKBOX ---
+col_gen = st.columns([1,1])
 with col_gen[0]:
-    visa_tider = st.checkbox("Visa tider", value=False)
-with col_gen[1]:
     generate = st.button("Generera schema")
+with col_gen[1]:
+    visa_tider = st.checkbox("Visa tider i schemat", value=False)
 
+# --- GENERERA SCHEMA LOGIK ---
 if generate:
     schema = skapa_schema()
-    total_week_pass_count = {n:0 for n in st.session_state.people}
-    total_week_minutes = {n:0 for n in st.session_state.people}
-
-    # --- För display ---
-    pass_times_display = [
-        f"{s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}" if visa_tider else "" for name, s, e in pass_times
-    ]
+    pass_times_display = [f"{s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}" if visa_tider else "" for name, s, e in pass_times]
 
     for vecka, dagar in schema.items():
         st.subheader(vecka)
-        week_pass_count = {n:0 for n in st.session_state.people}
-        week_minutes = {n:0 for n in st.session_state.people}
-
         for dag, passes in dagar.items():
             html = f"<h5>{dag}</h5><table style='border-collapse:collapse;width:100%;table-layout:fixed;'>"
             html += "<tr>"
@@ -292,50 +278,23 @@ if generate:
                     html += f"<td class='lunch-cell'>{person}</td>"
                 else:
                     color = farger.get(person,"white")
-                    strike_class = ""
-                    if person != "Ingen tillgänglig" and not dag_tillgang.get(person, {}).get(dag, True):
-                        strike_class = "strike"
-                    html += f"<td style='border:1px solid white;background:{color};color:black;text-align:center;height:60px;font-weight:bold;' class='{strike_class}'>{person}</td>"
-
-                    if person != "Ingen tillgänglig" and strike_class == "":
-                        week_pass_count[person] += 1
-                        week_minutes[person] += int((end_dt - start_dt).total_seconds()/60)
-
+                    html += f"<td style='border:1px solid white;background:{color};color:black;text-align:center;height:60px;font-weight:bold;'>{person}</td>"
             html += "</tr></table>"
             st.markdown(html, unsafe_allow_html=True)
 
-    # --- EXCEL Export ---
+    # --- EXCEL ---
     output = BytesIO()
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
         workbook = writer.book
         worksheet = workbook.add_worksheet("Schema")
         writer.sheets["Schema"] = worksheet
-
-        header_format = workbook.add_format({
-            "bold": True,
-            "border": 1,
-            "align": "center"
-        })
-        format_dict = {
-            person: workbook.add_format({
-                "bg_color": color,
-                "border": 1,
-                "align": "center",
-                "valign": "vcenter"
-            })
-            for person, color in farger.items()
-        }
-
+        header_format = workbook.add_format({"bold": True, "border": 1, "align": "center"})
+        format_dict = {person: workbook.add_format({"bg_color": color, "border": 1, "align": "center", "valign": "vcenter"}) for person, color in farger.items()}
         worksheet.write(0,0,"Dag",header_format)
         for i, (name, s, e) in enumerate(pass_times):
-            if name != "Lunch":
-                header_text = f"{s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}" if visa_tider else ""
-                worksheet.write(0,i+1,header_text,header_format)
-            else:
-                header_text = f"Lunch {s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}" if visa_tider else "Lunch"
-                worksheet.write(0,i+1,header_text,header_format)
+            header_text = f"{s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}" if visa_tider and name != "Lunch" else ("Lunch" if name=="Lunch" else "")
+            worksheet.write(0,i+1,header_text,header_format)
             worksheet.set_column(i+1,i+1,18)
-
         row = 1
         for vecka, dagar in schema.items():
             worksheet.write(row,0,vecka)
@@ -347,10 +306,5 @@ if generate:
                     worksheet.write(row,i+1,person,format_dict.get(person))
                 row += 1
             row += 1
-
-    st.download_button(
-        label="⬇️ Ladda ner schemat som Excel",
-        data=output.getvalue(),
-        file_name="schema.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    st.download_button(label="⬇️ Ladda ner schemat som Excel", data=output.getvalue(),
+                       file_name="schema.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
