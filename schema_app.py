@@ -80,7 +80,7 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
         with col3:
             lunch_start = st.time_input("Start", value=pd.to_datetime("12:00").time(), step=900)
         with col4:
-            lunch_end = st.time_input("Slut", value=pd.to_datetime("13:00").time(), step=900)
+            lunch_end = st.time_input("Slut", value=pd.to_datetime("12:30").time(), step=900)
 
     # --- Manual passtid direkt under lunch ---
     manual_times = st.checkbox("Justera passens tider manuellt")
