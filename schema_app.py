@@ -80,7 +80,7 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
     if manual_times:
         st.markdown("**Justera passens tider manuellt:**")
         
-        # Input för varje pass
+        # Input för varje pass med passnamn + start/slut
         for i in range(pass_per_day):
             cols = st.columns([0.2, 0.4, 0.4])  # Passnamn, start, slut
             with cols[0]:
@@ -105,17 +105,6 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
 
             prev_end = end_dt
             pass_times.append((start_dt, end_dt))
-
-        # Horisontell översikt med passnamn över klockslag
-        st.markdown("<div style='display:flex; gap:2px;'>", unsafe_allow_html=True)
-        for i, (s, e) in enumerate(pass_times):
-            st.markdown(f"""
-            <div style='flex:1; border:1px solid #ccc; text-align:center; padding:5px;'>
-                <div style='font-weight:bold;'>{f"Pass {i+1}"}</div>
-                <div>{s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}</div>
-            </div>
-            """, unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
 
     else:
         for i in range(pass_per_day):
