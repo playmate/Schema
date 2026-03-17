@@ -63,7 +63,6 @@ div.stButton > button:first-child {
 # --- SCHEDULE SETTINGS ---
 with st.expander("⚙️ Schemainställningar", expanded=True):
 
-    # --- Arbetstid ---
     st.markdown("""<div style='font-weight:bold;margin-bottom:0px;'>Arbetstid</div>""", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
@@ -82,7 +81,6 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
         with col4:
             lunch_end = st.time_input("Slut", value=pd.to_datetime("13:00").time())
 
-    # --- Diskret linje efter lunchtid ---
     st.markdown("<hr style='border:1px solid #e0e0e0;margin-top:8px;margin-bottom:8px;'>", unsafe_allow_html=True)
 
     # --- Passinställningar ---
@@ -101,6 +99,9 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
     start_day = pd.to_datetime(start_day_time.strftime("%H:%M"))
     end_day = pd.to_datetime(end_day_time.strftime("%H:%M"))
 
+    # --- Manuell passtidsredigering ---
+    manual_times = st.checkbox("Justera passens tider manuellt")
+
     # --- Beräkna pass före och efter lunch ---
     segments = []
     if lunch_enabled:
@@ -116,7 +117,7 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
     else:
         segments.append((start_day, end_day, pass_per_day))
 
-    # Beräkna pass-tider
+    # --- Beräkna initiala pass-tider ---
     pass_times = []
     pass_index = 0
     for seg_start, seg_end, seg_pass in segments:
@@ -132,9 +133,22 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
             current_start = current_end
             pass_index += 1
 
+    # --- Manuell justering ---
+    if manual_times:
+        st.markdown("### Manuella passtider")
+        new_pass_times = []
+        for i, (name, s, e) in enumerate(pass_times):
+            cols = st.columns([1,1])
+            with cols[0]:
+                new_start = st.time_input(f"{name} start", value=s.time(), key=f"manual_start_{i}")
+            with cols[1]:
+                new_end = st.time_input(f"{name} slut", value=e.time(), key=f"manual_end_{i}")
+            new_pass_times.append((name, pd.to_datetime(new_start.strftime("%H:%M")), pd.to_datetime(new_end.strftime("%H:%M"))))
+        pass_times = new_pass_times
+
     # --- Endast klockslag i display ---
     st.session_state.pass_times_display = [
-        f"{s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}" for _, s, e in pass_times
+        f"{s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}" for name, s, e in pass_times
     ]
 
 # --- PERSONAL ---
