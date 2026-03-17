@@ -72,6 +72,8 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
         end_day_time = st.time_input("", value=pd.to_datetime("16:00").time(), step=900)
 
     # --- Lunch ---
+        st.markdown("<hr style='border:1px solid #e0e0e0;margin-top:8px;margin-bottom:8px;'>", unsafe_allow_html=True)
+
     lunch_enabled = st.checkbox("Lunchrast - (obemannad tid)")
     lunch_start = lunch_end = None
     if lunch_enabled:
@@ -80,14 +82,14 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
             lunch_start = st.time_input("Start", value=pd.to_datetime("12:00").time(), step=900)
         with col4:
             lunch_end = st.time_input("Slut", value=pd.to_datetime("12:30").time(), step=900)
-            
+    # --- Diskret linje efter lunchtid ---
     st.markdown("<hr style='border:1px solid #e0e0e0;margin-top:8px;margin-bottom:8px;'>", unsafe_allow_html=True)
 
     # --- Manual passtid direkt under lunch ---
     
     manual_times = st.checkbox("Justera passens tider manuellt")
 
-    # --- Diskret linje efter lunchtid ---
+    # --- Diskret linje efter passtider ---
     st.markdown("<hr style='border:1px solid #e0e0e0;margin-top:8px;margin-bottom:8px;'>", unsafe_allow_html=True)
 
     # --- Passinställningar ---
