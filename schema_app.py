@@ -255,9 +255,10 @@ def skapa_schema():
 # --- GENERERA KNAPP ---
 col_gen = st.columns([1,1])
 with col_gen[0]:
-    visa_tider = st.checkbox("Visa tider i schemat", value=False)
-with col_gen[1]:
     generate = st.button("Generera schema")
+with col_gen[0]:
+    visa_tider = st.checkbox("Visa tider i schemat", value=False)
+
 
 # --- GENERERA SCHEMA LOGIK ---
 if generate:
