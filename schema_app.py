@@ -126,14 +126,14 @@ dag_tillgang = st.session_state.dag_tillgang
 start_tid = st.session_state.start_tid
 slut_tid = st.session_state.slut_tid
 
-# --- Personal med lista och rött kryss + collapse per person ---
+# --- Personal med collapse per person och borttagning i header ---
 with st.expander("👤 Personal", expanded=True):
     # Lägg till ny person
     col_add = st.columns([3,1])
     with col_add[0]:
-        ny_person_namn = st.text_input("Ny person:", "")
+        ny_person_namn = st.text_input("Lägg till person", "")
     with col_add[1]:
-        if st.button("➕ Lägg till person"):
+        if st.button("Lägg till"):
             if ny_person_namn and ny_person_namn not in st.session_state.people:
                 st.session_state.people.append(ny_person_namn)
                 st.session_state.dag_tillgang[ny_person_namn] = {dag: True for dag in veckodagar}
@@ -144,30 +144,15 @@ with st.expander("👤 Personal", expanded=True):
     if "remove_person" not in st.session_state:
         st.session_state.remove_person = None
 
-    # Lista personer med rött kryss
     st.markdown("**Nuvarande personal:**")
     for n in st.session_state.people:
-        cols = st.columns([6,1])
-        with cols[0]:
-            st.markdown(f"{n}")
-        with cols[1]:
+        # Skapa collapsible per person med kryss i header
+        exp_label = f"{n}"
+        with st.expander(exp_label, expanded=False):
+            # Knapp för att ta bort person
             if st.button("✖", key=f"remove_{n}", help="Ta bort person"):
                 st.session_state.remove_person = n
 
-    # Ta bort markerad person
-    if st.session_state.remove_person:
-        person_to_remove = st.session_state.remove_person
-        if person_to_remove in st.session_state.people:
-            st.session_state.people.remove(person_to_remove)
-            st.session_state.dag_tillgang.pop(person_to_remove, None)
-            st.session_state.start_tid.pop(person_to_remove, None)
-            st.session_state.slut_tid.pop(person_to_remove, None)
-        st.session_state.remove_person = None
-        st.experimental_rerun()
-
-    # Collapsible expander per person
-    for n in st.session_state.people:
-        with st.expander(f"{n}", expanded=False):
             for dag in veckodagar:
                 cols = st.columns([0.2,0.5,0.5,0.5])
                 with cols[0]:
@@ -184,6 +169,17 @@ with st.expander("👤 Personal", expanded=True):
                     if tillgang:
                         st.session_state.slut_tid[n] = st.session_state[f"end_{n}_{dag}"]
             st.markdown("<div class='day-separator'></div>", unsafe_allow_html=True)
+
+    # Ta bort markerad person efter rendering
+    if st.session_state.remove_person:
+        person_to_remove = st.session_state.remove_person
+        if person_to_remove in st.session_state.people:
+            st.session_state.people.remove(person_to_remove)
+            st.session_state.dag_tillgang.pop(person_to_remove, None)
+            st.session_state.start_tid.pop(person_to_remove, None)
+            st.session_state.slut_tid.pop(person_to_remove, None)
+        st.session_state.remove_person = None
+        st.experimental_rerun()
 
 # --- COLORS ---
 default_colors = [
