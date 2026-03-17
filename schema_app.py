@@ -57,6 +57,11 @@ div.stButton > button:first-child {
     text-align: center;
     height: 60px;
 }
+.summary-cell {
+    text-align:center;
+    font-weight:bold;
+    height:40px;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -71,7 +76,6 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
         end_day_time = st.time_input("", value=pd.to_datetime("16:00").time(), step=900)
 
     # --- Lunch ---
-    st.markdown("<hr style='border:1px solid #e0e0e0;margin-top:8px;margin-bottom:4px;'>", unsafe_allow_html=True)
     lunch_enabled = st.checkbox("Lunchrast (obemannad tid)")
     lunch_start = lunch_end = None
     if lunch_enabled:
@@ -80,9 +84,8 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
             lunch_start = st.time_input("Start", value=pd.to_datetime("12:00").time(), step=900)
         with col4:
             lunch_end = st.time_input("Slut", value=pd.to_datetime("13:00").time(), step=900)
-    st.markdown("<hr style='border:1px solid #e0e0e0;margin-top:4px;margin-bottom:8px;'>", unsafe_allow_html=True)
 
-    # --- Manual passtid ---
+    # --- Manual passtid direkt under lunch ---
     manual_times = st.checkbox("Justera passens tider manuellt")
 
     # --- Passinställningar ---
@@ -209,9 +212,12 @@ with st.expander("👤 Personal", expanded=False):
             st.session_state.people.remove(person_to_remove)
             st.session_state.dag_tillgang.pop(person_to_remove, None)
             st.session_state.work_times.pop(person_to_remove, None)
+            
+            # Ta bort alla session state-nycklar som innehåller personens namn
             keys_to_delete = [key for key in st.session_state.keys() if person_to_remove in key]
             for key in keys_to_delete:
                 del st.session_state[key]
+
         st.session_state.remove_person = None
         st.experimental_rerun()
 
@@ -263,13 +269,15 @@ if generate:
     schema = skapa_schema()
     pass_times_display = [f"{s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}" if visa_tider else "" for name, s, e in pass_times]
 
-    total_hours_all_weeks = {n: pd.Timedelta(0) for n in st.session_state.people}
-    total_pass_all_weeks = {n:0 for n in st.session_state.people}
+    total_time_per_person = {n: pd.Timedelta(0) for n in st.session_state.people}
+    total_time_per_person["Ingen tillgänglig"] = pd.Timedelta(0)
+    total_time_per_person["Lunch"] = pd.Timedelta(0)
 
     for vecka, dagar in schema.items():
         st.subheader(vecka)
-        total_hours_week = {n: pd.Timedelta(0) for n in st.session_state.people}
-        total_pass_week = {n:0 for n in st.session_state.people}
+        week_time_per_person = {n: pd.Timedelta(0) for n in st.session_state.people}
+        week_time_per_person["Ingen tillgänglig"] = pd.Timedelta(0)
+        week_time_per_person["Lunch"] = pd.Timedelta(0)
 
         for dag, passes in dagar.items():
             html = f"<h5>{dag}</h5><table style='border-collapse:collapse;width:100%;table-layout:fixed;'>"
@@ -279,33 +287,40 @@ if generate:
             html += "</tr><tr>"
             for name, start_dt, end_dt in pass_times:
                 person = passes[name if name != "Lunch" else "Lunch"]
-                if name == "Lunch":
-                    html += f"<td class='lunch-cell'>{person}</td>"
-                else:
-                    color = farger.get(person,"white")
-                    html += f"<td style='border:1px solid white;background:{color};color:black;text-align:center;height:60px;font-weight:bold;'>{person}</td>"
-                    if person not in ["Ingen tillgänglig", "Lunch"]:
-                        total_hours_week[person] += (end_dt - start_dt)
-                        total_pass_week[person] += 1
+                duration = end_dt - start_dt
+                week_time_per_person[person] += duration
+                html_class = 'lunch-cell' if name=="Lunch" else ''
+                color = farger.get(person,"white") if name != "Lunch" else "#E0E0E0"
+                html += f"<td class='{html_class}' style='border:1px solid white;background:{color};color:black;text-align:center;height:60px;font-weight:bold;'>{person}</td>"
             html += "</tr></table>"
             st.markdown(html, unsafe_allow_html=True)
 
-        # --- Veckosammanställning ---
-        with st.expander(f"📊 Sammanställning vecka ({vecka})", expanded=False):
-            for person in st.session_state.people:
-                timmar = total_hours_week[person].seconds // 3600
-                minuter = (total_hours_week[person].seconds % 3600) // 60
-                st.write(f"{person}: {total_pass_week[person]} pass, {timmar:02d}:{minuter:02d} timmar")
-                total_hours_all_weeks[person] += total_hours_week[person]
-                total_pass_all_weeks[person] += total_pass_week[person]
+        # Veckosammanställning i en collapsad sektion
+        with st.expander(f"📊 Sammanställning Vecka {vecka}", expanded=False):
+            summary_html = "<table style='border-collapse:collapse;width:50%;'>"
+            summary_html += "<tr><th>Person</th><th>Antal pass</th><th>Total tid</th></tr>"
+            for person, td in week_time_per_person.items():
+                antal_pass = sum(1 for dag in dagar.values() for p_name, *_ in pass_times if dag[p_name]==person)
+                hhmm = f"{int(td.total_seconds()//3600):02d}:{int((td.total_seconds()%3600)//60):02d}"
+                summary_html += f"<tr style='background:{farger.get(person,'white')};'><td>{person}</td><td>{antal_pass}</td><td>{hhmm}</td></tr>"
+            summary_html += "</table>"
+            st.markdown(summary_html, unsafe_allow_html=True)
 
-    # --- Sammanställning för alla veckor om fler än 1 vecka ---
+        # Lägg till i total tid
+        for person in total_time_per_person.keys():
+            total_time_per_person[person] += week_time_per_person[person]
+
+    # Total sammanställning om fler än 1 vecka
     if antal_veckor > 1:
-        with st.expander("📊 Totalsammanställning alla veckor", expanded=True):
-            for person in st.session_state.people:
-                timmar = total_hours_all_weeks[person].seconds // 3600
-                minuter = (total_hours_all_weeks[person].seconds % 3600) // 60
-                st.write(f"{person}: {total_pass_all_weeks[person]} pass, {timmar:02d}:{minuter:02d} timmar")
+        with st.expander("📊 Totalsammanställning över alla veckor", expanded=True):
+            summary_html = "<table style='border-collapse:collapse;width:50%;'>"
+            summary_html += "<tr><th>Person</th><th>Antal pass</th><th>Total tid</th></tr>"
+            for person, td in total_time_per_person.items():
+                antal_pass = sum(1 for vecka in schema.values() for dag in vecka.values() for p_name, *_ in pass_times if dag[p_name]==person)
+                hhmm = f"{int(td.total_seconds()//3600):02d}:{int((td.total_seconds()%3600)//60):02d}"
+                summary_html += f"<tr style='background:{farger.get(person,'white')};'><td>{person}</td><td>{antal_pass}</td><td>{hhmm}</td></tr>"
+            summary_html += "</table>"
+            st.markdown(summary_html, unsafe_allow_html=True)
 
     # --- EXCEL ---
     output = BytesIO()
@@ -326,10 +341,4 @@ if generate:
             row += 1
             for dag, passes in dagar.items():
                 worksheet.write(row,0,dag)
-                for i, (name, s, e) in enumerate(pass_times):
-                    person = passes[name if name != "Lunch" else "Lunch"]
-                    worksheet.write(row,i+1,person,format_dict.get(person))
-                row += 1
-            row += 1
-    st.download_button(label="⬇️ Ladda ner schemat som Excel", data=output.getvalue(),
-                       file_name="schema.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                for i, (
