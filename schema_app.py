@@ -84,6 +84,7 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
     st.markdown("<hr style='border:1px solid #e0e0e0;margin-top:8px;margin-bottom:8px;'>", unsafe_allow_html=True)
 
     # --- Manual passtid direkt under lunch ---
+    
     manual_times = st.checkbox("Justera passens tider manuellt")
 
     # --- Diskret linje efter lunchtid ---
