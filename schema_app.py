@@ -126,7 +126,7 @@ dag_tillgang = st.session_state.dag_tillgang
 start_tid = st.session_state.start_tid
 slut_tid = st.session_state.slut_tid
 
-# --- PERSONAL SECTION MED LISTA + RÖTT KRYSS ---
+# --- Personal med lista och rött kryss ---
 with st.expander("👤 Personal", expanded=True):
     # Lägg till ny person
     col_add = st.columns([3,1])
@@ -136,27 +136,33 @@ with st.expander("👤 Personal", expanded=True):
         if st.button("➕ Lägg till person"):
             if ny_person_namn and ny_person_namn not in st.session_state.people:
                 st.session_state.people.append(ny_person_namn)
-                dag_tillgang[ny_person_namn] = {dag: True for dag in veckodagar}
-                start_tid[ny_person_namn] = pd.to_datetime("08:00").time()
-                slut_tid[ny_person_namn] = pd.to_datetime("16:00").time()
+                st.session_state.dag_tillgang[ny_person_namn] = {dag: True for dag in veckodagar}
+                st.session_state.start_tid[ny_person_namn] = pd.to_datetime("08:00").time()
+                st.session_state.slut_tid[ny_person_namn] = pd.to_datetime("16:00").time()
 
-    # Lista alla personer med rött kryss
+    # Temporär variabel för borttagning
+    if "remove_person" not in st.session_state:
+        st.session_state.remove_person = None
+
+    # Lista personer med rött kryss
     st.markdown("**Nuvarande personal:**")
-    remove_indices = []
-    for i, n in enumerate(st.session_state.people):
+    for n in st.session_state.people:
         cols = st.columns([6,1])
         with cols[0]:
             st.markdown(f"{n}")
         with cols[1]:
             if st.button("✖", key=f"remove_{n}", help="Ta bort person"):
-                remove_indices.append(i)
-    # Ta bort markerade personer
-    for idx in sorted(remove_indices, reverse=True):
-        person_to_remove = st.session_state.people[idx]
-        st.session_state.people.pop(idx)
-        dag_tillgang.pop(person_to_remove, None)
-        start_tid.pop(person_to_remove, None)
-        slut_tid.pop(person_to_remove, None)
+                st.session_state.remove_person = n
+
+    # Ta bort markerad person
+    if st.session_state.remove_person:
+        person_to_remove = st.session_state.remove_person
+        if person_to_remove in st.session_state.people:
+            st.session_state.people.remove(person_to_remove)
+            st.session_state.dag_tillgang.pop(person_to_remove, None)
+            st.session_state.start_tid.pop(person_to_remove, None)
+            st.session_state.slut_tid.pop(person_to_remove, None)
+        st.session_state.remove_person = None
         st.experimental_rerun()
 
     # Arbetstider per person
@@ -165,18 +171,18 @@ with st.expander("👤 Personal", expanded=True):
         for dag in veckodagar:
             cols = st.columns([0.2,0.5,0.5,0.5])
             with cols[0]:
-                tillgang = st.checkbox("", value=dag_tillgang[n][dag], key=f"available_{n}_{dag}")
-                dag_tillgang[n][dag] = tillgang
+                tillgang = st.checkbox("", value=st.session_state.dag_tillgang[n][dag], key=f"available_{n}_{dag}")
+                st.session_state.dag_tillgang[n][dag] = tillgang
             with cols[1]:
                 st.markdown(f"**{dag}**" if tillgang else f"<span class='strike'>{dag}</span>", unsafe_allow_html=True)
             with cols[2]:
-                st.time_input("Start", value=start_tid[n], key=f"start_{n}_{dag}", disabled=not tillgang)
+                st.time_input("Start", value=st.session_state.start_tid[n], key=f"start_{n}_{dag}", disabled=not tillgang)
                 if tillgang:
-                    start_tid[n] = st.session_state[f"start_{n}_{dag}"]
+                    st.session_state.start_tid[n] = st.session_state[f"start_{n}_{dag}"]
             with cols[3]:
-                st.time_input("Slut", value=slut_tid[n], key=f"end_{n}_{dag}", disabled=not tillgang)
+                st.time_input("Slut", value=st.session_state.slut_tid[n], key=f"end_{n}_{dag}", disabled=not tillgang)
                 if tillgang:
-                    slut_tid[n] = st.session_state[f"end_{n}_{dag}"]
+                    st.session_state.slut_tid[n] = st.session_state[f"end_{n}_{dag}"]
         st.markdown("<div class='day-separator'></div>", unsafe_allow_html=True)
 
 # --- COLORS ---
