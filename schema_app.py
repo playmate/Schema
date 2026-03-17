@@ -341,4 +341,10 @@ if generate:
             row += 1
             for dag, passes in dagar.items():
                 worksheet.write(row,0,dag)
-                for i, (
+                for i, (name, s, e) in enumerate(pass_times):
+                    person = passes[name if name != "Lunch" else "Lunch"]
+                    worksheet.write(row,i+1,person,format_dict.get(person))
+                row += 1
+            row += 1
+    st.download_button(label="⬇️ Ladda ner schemat som Excel", data=output.getvalue(),
+                       file_name="schema.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
