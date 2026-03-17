@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as st 
 import pandas as pd
 import random
 from io import BytesIO
@@ -78,28 +78,36 @@ with st.expander("⚙️ Schemainställningar", expanded=True):
     prev_end = start_day
 
     if manual_times:
+        st.markdown("**Justera passens tider manuellt:**")
         for i in range(pass_per_day):
-            cols = st.columns(2)
+            cols = st.columns([0.2, 0.4, 0.4])  # passnummer, starttid, sluttid
             with cols[0]:
-                start_input = st.time_input(
-                    f"Pass {i+1} start",
-                    value=prev_end.time(),
-                    key=f"start_pass_{i}"
-                )
+                st.markdown(f"**Pass {i+1}**")
             with cols[1]:
+                start_input = st.time_input(
+                    "", value=prev_end.time(), key=f"start_pass_{i}"
+                )
+            with cols[2]:
                 end_input = st.time_input(
-                    f"Pass {i+1} slut",
-                    value=(prev_end + pd.Timedelta(minutes=pass_langd)).time(),
-                    key=f"end_pass_{i}"
+                    "", value=(prev_end + pd.Timedelta(minutes=pass_langd)).time(), key=f"end_pass_{i}"
                 )
             start_dt = pd.to_datetime(start_input.strftime("%H:%M"))
             end_dt = pd.to_datetime(end_input.strftime("%H:%M"))
+
+            # Säkerställ att tiderna är i ordning
             if start_dt < prev_end:
                 start_dt = prev_end
             if end_dt <= start_dt:
                 end_dt = start_dt + pd.Timedelta(minutes=pass_langd)
+
             prev_end = end_dt
             pass_times.append((start_dt, end_dt))
+
+        # Visa sammanfattning horisontellt
+        st.markdown("<div style='display:flex; gap:10px;'>", unsafe_allow_html=True)
+        for s, e in pass_times:
+            st.markdown(f"<div style='text-align:center; flex:1; padding:5px; border:1px solid #ccc;'>{s.time().strftime('%H:%M')}–{e.time().strftime('%H:%M')}</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
     else:
         for i in range(pass_per_day):
             start_dt = start_day + pd.Timedelta(minutes=i * pass_langd)
@@ -152,7 +160,6 @@ with st.expander("👤 Personal", expanded=True):
         with cols[0]:
             nytt_namn = st.text_input("", value=n, key=f"edit_name_{n}")
             if nytt_namn != n and nytt_namn not in st.session_state.people:
-                # Uppdatera alla referenser
                 st.session_state.people[st.session_state.people.index(n)] = nytt_namn
                 st.session_state.dag_tillgang[nytt_namn] = st.session_state.dag_tillgang.pop(n)
                 st.session_state.work_times[nytt_namn] = st.session_state.work_times.pop(n)
